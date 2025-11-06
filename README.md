@@ -42,19 +42,19 @@ Sending to a loco that is selected in a control 80f can crash the system.
 - Start: 96
 
 - Turnout left(green): 33 X <-- X stands for address 1-256
-example turnout 5 left: 33 5
+ - example turnout 5 left: 33 5
 
 - Turnout right(red): 34 X <-- X stands for address 1-256
-example turnout 7 right: 34 7
+ - example turnout 7 right: 34 7
 
 - Turnout solenoid off: 32 X <-- X stands for address 1-256 only needed in older central units
-example turnout 75 off: 34 75
+ - example turnout 75 off: 34 75
 
 - Change loco Direction: 15 X  <-- X stands for address 1-80
-example loco 12 change direction: 15 12
+ - example loco 12 change direction: 15 12
 
 - Set loco Speed: X Y <-- X stands for speed 1-14, Y stands for address 1-80
-exampe loco 23 speed 12: 12 23
+ - exampe loco 23 speed 12: 12 23
 
 - Set loco Speed and Function: X Y <-- X stands for speed(0-14)+function (+16=on +0=off), Y stands for address 1-80   can only be done this way.
 exampe loco 31 speed 3 funktion 1: speed(3)+16: 20 31
