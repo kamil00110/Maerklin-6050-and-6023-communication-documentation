@@ -2,13 +2,13 @@
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
 Both use serial comunication with the folowing specs:
 
-6050:
+##6050:
 
-Baud: 2400
-Start bits: 1
-Word size: 8
-Stop bits: 2
-Parity: None
+-Baud: 2400
+-Start bits: 1
+-Word size: 8
+-Stop bits: 2
+-Parity: None
 
 
 Uses only These Serial Pins:
