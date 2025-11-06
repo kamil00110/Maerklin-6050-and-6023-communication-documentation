@@ -37,39 +37,39 @@ Sending to a loco that is selected in a control 80f can crash the system.
 
 ## Sending the data:
 
-Shutdown: 97
+- Shutdown: 97
 
-Start: 96
+- Start: 96
 
-Turnout left(green): 33 X <-- X stands for address 1-256
+- Turnout left(green): 33 X <-- X stands for address 1-256
 example turnout 5 left: 33 5
 
-Turnout right(red): 34 X <-- X stands for address 1-256
+- Turnout right(red): 34 X <-- X stands for address 1-256
 example turnout 7 right: 34 7
 
-Turnout solenoid off: 32 X <-- X stands for address 1-256 only needed in older central units
+- Turnout solenoid off: 32 X <-- X stands for address 1-256 only needed in older central units
 example turnout 75 off: 34 75
 
-Change loco Direction: 15 X  <-- X stands for address 1-80
+- Change loco Direction: 15 X  <-- X stands for address 1-80
 example loco 12 change direction: 15 12
 
-Set loco Speed: X Y <-- X stands for speed 1-14, Y stands for address 1-80
+- Set loco Speed: X Y <-- X stands for speed 1-14, Y stands for address 1-80
 exampe loco 23 speed 12: 12 23
 
-Set loco Speed and Function: X Y <-- X stands for speed(0-14)+function (+16=on +0=off), Y stands for address 1-80   can only be done this way.
+- Set loco Speed and Function: X Y <-- X stands for speed(0-14)+function (+16=on +0=off), Y stands for address 1-80   can only be done this way.
 exampe loco 31 speed 3 funktion 1: speed(3)+16: 20 31
 
-Read s88 unit: X <-- X stands for 192+address(1-31) 1 unit has 16 contacts. according to märklin 60128 software
+- Read s88 unit: X <-- X stands for 192+address(1-31) 1 unit has 16 contacts. according to märklin 60128 software
 example reed s88 module 5: 197
 response binary example 0=unset 1=set: 00110101 1000110
 
-Read multiple s88 contacts: X <-- X stands for 128+address(1-31). according to märklin 60128 software
+- Read multiple s88 contacts: X <-- X stands for 128+address(1-31). according to märklin 60128 software
 example reed s88 module 1-5: 133
 response binary example 0=unset 1=set: "00110101 1000110" *5
 
-Reset s88 units: 192 or 128
+- Reset s88 units: 192 or 128
 
-Call function F1-4: X Y <-- X stands for functioncode, Y stands for address 1-80, no additiona speed information needed 
+- Call function F1-4: X Y <-- X stands for functioncode, Y stands for address 1-80, no additiona speed information needed 
 function codes:  //untested
 64: all off
 65: F1 on
@@ -157,13 +157,13 @@ example Kill Job 3: K 3 (CR)
 
 
 ## Central unit depending functions:
-6020: dosnt support F1-4
-6021: supports F1-4
-6022: dosnt support F1-4, only Train addresses 10,20,30,40
-6023/6223: dosnt support F1-4, only Train addresses 10,20,30,40, has an integraded Serial Interface, only supports 4 s88 modules
-6027: dcc support, supports F1-4, frezzes when to much data is sent
-6028: dcc support, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
-6030: dcc support; higher voltage for scale 1 trains, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
+- 6020: dosnt support F1-4
+- 6021: supports F1-4
+- 6022: dosnt support F1-4, only Train addresses 10,20,30,40
+- 6023/6223: dosnt support F1-4, only Train addresses 10,20,30,40, has an integraded Serial Interface, only supports 4 s88 modules
+- 6027: dcc support, supports F1-4, frezzes when to much data is sent
+- 6028: dcc support, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
+- 6030: dcc support; higher voltage for scale 1 trains, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
 
 ## Aditional info 
 Things that dont work: When a Control 80/80f or control unit has a loco address selected 
