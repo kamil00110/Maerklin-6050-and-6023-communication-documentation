@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Märklin Interface Controller</title>
+<style>
+body { font-family: sans-serif; background: #1e1e1e; color: #eee; margin: 20px; }
+#output { width: 100%; height: 300px; background: #000; color: #0f0; padding: 8px; overflow-y: auto; font-family: monospace; }
+#cmd { width: 70%; padding: 6px; font-size: 16px; }
+button { padding: 8px 12px; margin: 4px; font-size: 14px; }
+.commands { margin-top:10px; }
+.led {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: #333;
+  color: #fff;
+  text-align: center;
+  line-height: 20px;
+  font-size: 10px;
+}
+.led.on { background: #0f0; }
+.led.error { background: #f00; }
+#leds { margin-top: 10px; }
+</style>
+</head>
+<body>
+<h2>Märklin Interface Web Console</h2>
+<button id="connect">🔌 Connect</button>
+<div class="commands">
+  <input id="cmd" placeholder="Enter ASCII command (e.g. M 1 R, L 5 S 10)">
+  <button id="send">Send</button>
+</div>
+
+<h3>Quick Actions:</h3>
+<button onclick="Stop()">Emergency Stop</button>
+<button onclick="Go()">Go</button><br>
+<input type="number" id="turnout" min="1" max="255" value="1" style="width:50px">
+<label for="turnout">address</label>
+<select id="branch">
+  <option value="0">red</option>
+  <option value="1">green</option>
+</select>
+<button onclick="setSwitch(document.getElementById('turnout').value || 1,document.getElementById('branch').value)">Turnout Branch</button>
+<br>
+<input type="number" id="gs88modul" min="1" max="16" value="1" style="width:50px">
+<label for="gs88modul">address</label>
+<button onclick="getS88modul(document.getElementById('gs88modul').value || 1)">Read S88 Modul</button>
+<input type="number" id="gs88contact" min="1" max="992" value="1" style="width:50px">
+<label for="gs88contact">address</label>
+<button onclick="getS88contact(document.getElementById('gs88contact').value || 1)">Read S88 Contact</button>
+<br><input type="number" id="Lok" min="1" max="80" value="1" style="width:50px">
+<label for="Lok">address</label>
+<input type="number" id="Speed" min="1" max="14" value="1" style="width:50px">
+<label for="Speed">Speed</label>
+<select id="Funktion">
+  <option value=""></option>
+  <option value="">F0 Off</option>
+  <option value="0">F0 On</option>
+  <option value="1">F1</option>
+  <option value="2">F2</option>
+  <option value="3">F3</option>
+  <option value="4">F4</option>
+  <option value="1+2">F1+F2</option>
+  <option value="1+3">F1+F3</option>
+  <option value="1+4">F1+F4</option>
+  <option value="2+3">F2+F3</option>
+  <option value="2+4">F2+F4</option>
+  <option value="3+4">F3+F4</option>
+  <option value="1+2+3">F1+F2+F3</option>
+  <option value="1+2+4">F1+F2+F4</option>
+  <option value="1+3+4">F1+F3+F4</option>
+  <option value="2+3+4">F2+F3+F4</option>
+  <option value="1+2+3+4">F1+F2+F3+F4</option>
+</select>
+<label for="Funktion">function</label>
+<button onclick="Lok(document.getElementById('Lok').value || 1,document.getElementById('Speed').value, document.getElementById('Funktion').value)">Lok</button>
+<input type="number" id="LokDir" min="1" max="80" value="1" style="width:50px">
+<label for="LokDir">address</label>
+<button onclick="LokDir(document.getElementById('LokDir').value || 1)">Change Direction</button>
+<br>
+<select id="Echo">
+  <option value="0">0</option>
+  <option value="1">1</option>
+  <option value="2">2</option>
+</select>
+<button onclick="EchoMode(document.getElementById('Echo').value)">Enable Echo Mode</button>
+
+
+
+<h3>Line Status:</h3>
+<div id="leds">
+  <span id="led-cts" class="led">CTS</span>
+  <span id="led-rx" class="led">RX</span>
+  <span id="led-tx" class="led">TX</span>
+  <span id="led-err" class="led">ERR</span>
+</div>
+<button onclick="setsystem(6050)">Set as 6050</button>
+<button onclick="setsystem(6023)">Set as 6023</button>
+<h3>Received Data:</h3>
+<div id="output"></div>
+
+<script>
+let type;
+let port, reader, writer;
+let lastResponse = "";
+const output = document.getElementById('output');
+
+function setSwitch(addr, direction){
+   if(type=="6023"){
+      if(direction == "0"){
+	     direction = "R";
+	  }
+	  if(direction == "1"){
+	     direction = "G";
+	  }
+      sendCmd("M " + addr + " " + direction);
+   }
+   if(type=="6050"){
+      if(direction == "0"){
+	     direction = "34";
+	  }
+	  if(direction == "1"){
+	     direction = "33";
+	  }
+      sendCmd(direction + " " + addr);
+   }
+}
+function getS88modul(addr){
+   if(type=="6023"){
+      sendCmd("A " + addr);
+   }
+   if(type=="6050"){
+      addr = Number(addr) + Number("192");
+      sendCmd(addr);
+   }
+}
+
+function getS88contact(addr){
+   if(type=="6023"){
+      sendCmd("C " + addr);
+   }
+   if(type=="6050"){
+      addr = Number(addr) + Number("128");
+      sendCmd(addr);
+   }
+}
+function Stop(){
+   if(type=="6023"){
+      sendCmd("S");
+   }
+   if(type=="6050"){
+      sendCmd("97");
+   }
+}
+function Go(){
+   if(type=="6023"){
+      sendCmd("G");
+   }
+   if(type=="6050"){
+      sendCmd("96");
+   }
+}
+function Lok(addr,speed,funk){
+   if(type=="6023"){
+      if(funk==""){
+      sendCmd("L "+addr+" S "+speed);
+	  }
+	  else{
+	    if(isNaN(funk)){
+	        log("only F0 is supported on 6023/6223");
+		}
+		else{
+		    sendCmd("L "+addr+" S "+speed+" F "+funk);  
+		}
+	  }
+   }
+   if(type=="6050"){
+      if(funk=="0"){
+      speed=Number(speed) + Number("16");
+      sendCmd(speed+" "+addr);
+	  }
+	  if(funk=="1"){
+      sendCmd("65 "+addr);
+	  }
+	  if(funk=="2"){
+      sendCmd("66 "+addr);
+	  }
+	  if(funk=="3"){
+      sendCmd("68 "+addr);
+	  }
+	  if(funk=="4"){
+      sendCmd("72 "+addr);
+	  }
+	  if(funk=="1+2"){
+      sendCmd("67 "+addr);
+	  }
+	  if(funk=="1+3"){
+      sendCmd("69 "+addr);
+	  }
+	  if(funk=="1+4"){
+      sendCmd("73 "+addr);
+	  }
+	  if(funk=="2+3"){
+      sendCmd("70 "+addr);
+	  }
+	  if(funk=="2+4"){
+      sendCmd("74 "+addr);
+	  }
+	  if(funk=="3+4"){
+      sendCmd("76 "+addr);
+	  }
+	  if(funk=="1+2+3"){
+      sendCmd("71 "+addr);
+	  }
+	  if(funk=="2+3+4"){
+      sendCmd("78 "+addr);
+	  }
+	  if(funk=="1+2+4"){
+      sendCmd("75 "+addr);
+	  }
+	  if(funk=="1+3+4"){
+      sendCmd("77 "+addr);
+	  }
+	  if(funk=="1+2+3+4"){
+      sendCmd("79 "+addr);
+	  }
+	  
+	  
+	  if(funk==""){
+      sendCmd(speed+" "+addr);
+	  }
+   }
+}
+function LokDir(addr){
+   if(type=="6023"){
+      sendCmd("L "+addr+" D");
+   }
+   if(type=="6050"){
+      sendCmd("15 "+addr);
+   }
+}
+function EchoMode(mode){
+   if(type=="6023"){
+      sendCmd("E "+mode);
+   }
+   if(type=="6050"){
+      log("unsuported on 6050/6051");
+   }
+}
+
+function setsystem(system){
+   type = system;
+}
+function log(text) {
+  output.textContent += text + '\n';
+  output.scrollTop = output.scrollHeight;
+}
+function blinkLED(id, duration = 100) {
+  const led = document.getElementById(id);
+  if (!led) return;
+  led.classList.add('on');
+  setTimeout(() => led.classList.remove('on'), duration);
+}
+
+function setErrorLED(on = true) {
+  const led = document.getElementById('led-err');
+  if (!led) return;
+  if (on) led.classList.add('error');
+  else led.classList.remove('error');
+}
+
+async function connect() {
+  try {
+    setErrorLED(false);
+    // Ask for serial device
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 2400, dataBits: 8, stopBits: 2, parity: 'none' });
+
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+
+    log('✅ Connected to Märklin interface');
+    checkType();
+    // Start continuous reading loop
+    startContinuousReadLoop();
+    updateCTS();
+  } catch (err) {
+    log('❌ ' + err);
+	setErrorLED(true);
+  }
+}
+
+
+// Continuously reads and logs all incoming serial data
+async function startContinuousReadLoop() {
+  const decoder = new TextDecoder();
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) {
+	    blinkLED('led-rx', 100);
+        const text = decoder.decode(value);
+        lastResponse = text;
+        log('RX: ' + text.trim());
+      }
+    }
+  } catch (err) {
+    log('⚠️ Read error: ' + err);
+	setErrorLED(true);
+  } finally {
+    log('🔌 Disconnected');
+    reader.releaseLock();
+  }
+}
+
+// Sends ASCII or binary command depending on format
+async function sendCmd(command) {
+  if (!writer) { log('⚠️ Not connected'); setErrorLED(true); return; }
+  blinkLED('led-tx', 100);
+  // Detect binary (numbers) or ASCII (letters)
+  const isBinary = /^[0-9\s]+$/.test(command.trim());
+
+  if (isBinary) {
+    let parts = command.trim().split(/\s+/);
+    const bytes = parts.map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 0 && n <= 255);
+    if (bytes.length === 0) { log('⚠️ Invalid input'); setErrorLED(true); return; }
+    await writer.write(new Uint8Array(bytes));
+    log('TX (BIN): ' + bytes.join(' '));
+  } else {
+    const fullCmd = command.trim() + '\r';
+    await writer.write(new TextEncoder().encode(fullCmd));
+    log('TX (ASCII): ' + command);
+  }
+  setErrorLED(false);
+}
+async function updateCTS() {
+  const led = document.getElementById('led-cts');
+  if (!port) {
+    led.classList.remove('on');
+    return;
+  }
+  try {
+    const signals = await port.getSignals();
+    if (signals.clearToSend) led.classList.add('on');
+    else led.classList.remove('on');
+  } catch (err) {
+    // Adapter may not support CTS — simulate "connected" instead
+    led.classList.add('on');
+  }
+  setTimeout(updateCTS, 200);
+}
+document.getElementById('connect').onclick = connect;
+document.getElementById('send').onclick = () => {
+  const cmdInput = document.getElementById('cmd').value;
+  sendCmd(cmdInput);
+};
+
+
+
+ // Clear lastResponse
+  
+  
+async function checkType() {
+  if (!writer) { log('⚠️ Not connected'); return; }
+  const BINcmd = "129";
+    const bytes = BINcmd.trim().split(/\s+/).map(n => parseInt(n)).filter(n => !isNaN(n) && n >= 0 && n <= 255);
+    if (bytes.length === 0) { log('⚠️ Invalid binary input'); return; }
+
+    lastResponse = "";
+    await writer.write(new Uint8Array(bytes));
+
+    const binResponse = await waitForResponse(1000);
+ 
+
+  if (binResponse) {
+    log('✅ Märklin 6050/6051 detected: ' + binResponse.trim());
+	type = "6050";
+  } else {
+    log('❌ No Binary response detected, trying ASCII mode');
+
+    // Send binary test command
+     lastResponse = "";
+
+  // Send ASCII test command
+  const ASCIIcmd = "A 1";
+  const fullCmd = ASCIIcmd.trim() + '\r';
+  await writer.write(new TextEncoder().encode(fullCmd));
+
+  // Wait until lastResponse is updated or timeout
+  const response = await waitForResponse(1000); // 1 second timeout
+  
+  
+   
+	  
+	  
+	  
+	  
+    if (response) {
+      log('✅ Märklin 6023/6223 detected: ' + response.trim());
+	  type = "6023";
+    } else {
+      log('❌ No 6023/6223 response detected');
+    }
+  }
+}
+
+// Helper: resolves when lastResponse updates or timeout expires
+function waitForResponse(timeoutMs) {
+  return new Promise(resolve => {
+    const start = performance.now();
+    const interval = setInterval(() => {
+      if (lastResponse && lastResponse.trim() !== "") {
+        clearInterval(interval);
+        resolve(lastResponse);
+      } else if (performance.now() - start > timeoutMs) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, 20); // check every 20ms
+  });
+}
+
+
+</script>
+
+</body>
+</html>
