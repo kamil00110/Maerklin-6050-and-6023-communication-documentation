@@ -25,7 +25,7 @@ The Central Unit 6027/6029/6030 will need a manual reset. Behaviour of 6032 is u
 Sending to a loco that is selected in a control 80f can crash the system.
 (6223/6023/6022 will only accept loco adresses 10/20/30/40)
 
-Sending the data:
+## Sending the data:
 
 Shutdown: 97
 
@@ -82,26 +82,27 @@ example loco 12 activate function F1-3: 71 12
 
 
 
-6023:
+## 6023:
 The 6023 is a newer system that wants ASCII commands it ignores the standart comands unless set into
 compatibility mode which also deactivates ASCII comunication after each command a carrage retun(CR) is needed.
 It is limmited to 4 s88 modules (64 contacts) and it auto shut offs solenoids after 200 milliseconds which can be changed
 
-
-Baud: 2400    //acording to some sources it can handle 19200 Baud couldn't check because of wrong and janky cable type.
-Start bits: 1
-Word size: 8
-Stop bits: 2
-Parity: None
-
+- Baud: 2400    //acording to some sources it can handle 19200 Baud couldn't check because of wrong and janky cable type.
+- Start bits: 1
+- Word size: 8
+- Stop bits: 2
+-Parity: None
 
 Uses only These Serial Pins:
-Pin1 = TX
-Pin2 = Used but Unknown yet
-Pin3 = GND
-Pin4 = RX
-Pin5 = CTS
-Pin6 = Used but Unknown yet
+
+- Pin1 = TX
+- Pin2 = Used but Unknown yet
+- Pin3 = GND
+- Pin4 = RX
+- Pin5 = CTS
+- Pin6 = Used but Unknown yet
+
+## Sending the data:
 
 Bin Compatibility mode: Q (CR)
 
@@ -148,7 +149,7 @@ example Kill Job 3: K 3 (CR)
 
 
 
-Central unit depending functions:
+## Central unit depending functions:
 6020: dosnt support F1-4
 6021: supports F1-4
 6022: dosnt support F1-4, only Train addresses 10,20,30,40
@@ -157,14 +158,14 @@ Central unit depending functions:
 6028: dcc support, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
 6030: dcc support; higher voltage for scale 1 trains, supports F1-4, frezzes when to much data is sent //untested but should be the same as 6027
 
-Aditional info 
+## Aditional info 
 Things that dont work: When a Control 80/80f or control unit has a loco address selected 
 then it will be inpossible to controll the loco with a 6050 interface. It may even crash to 6027.
 
 The interface modules are able to switch the Led on the 6040 Keyboard but they
 can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control Units externaly.
 
-Unused bytes:
+## Used bytes:
 
 0-15 speed
 16-31 funktion
