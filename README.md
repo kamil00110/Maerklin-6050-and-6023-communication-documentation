@@ -41,10 +41,10 @@ Sending to a loco that is selected in a control 80f can crash the system.
 
 - Start: `96`
 
-- Turnout left(green): `33 X` <-- X stands for address 1-256
+- Turnout left(green): `33 X` <-- X stands for address `1-256`
   - example turnout 5 left: `33 5`
 
-- Turnout right(red): `34 X` <-- X stands for address 1-256
+- Turnout right(red): `34 X` <-- X stands for address `1-256`
   - example turnout 7 right: `34 7`
 
 - Turnout solenoid off: 32 X <-- X stands for address 1-256 only needed in older central units
