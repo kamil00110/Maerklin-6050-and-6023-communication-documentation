@@ -6,6 +6,7 @@
 > Addiionaly you can download an Webpage for testing all of these comands.
 
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
+
 Both use serial comunication with the folowing specs:
 
 ## 6050:
