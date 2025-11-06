@@ -1,4 +1,8 @@
 # Märklin-6050-and-6023-communication-documentation
+> [!NOTE]
+> This documentation can contain errors or have missing parts. If you find something please create an Issiue.
+> [!TIP]
+> Addiionaly you can download an Webpage for testing all of these comands.
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
 Both use serial comunication with the folowing specs:
 
@@ -78,9 +82,6 @@ function codes:  //untested
 78: F2-4 on
 79: F1-4 on
 example loco 12 activate function F1-3: 71 12
-
-
-
 
 ## 6023:
 The 6023 is a newer system that wants ASCII commands it ignores the standart comands unless set into
@@ -167,17 +168,17 @@ can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control U
 
 ## Used bytes:
 
-0-15 speed
-16-31 funktion
-32-34 switches
-35-68 ???
-64-79 F0-4
-80-95 ???
-96-97 Start/Stop
-98-127 ???
-128 reset
-129-160 S88
-161-191 ???
-192 reset
-193-224 S88
-225+ ???
+- 0-15 speed
+- 16-31 function
+- 32-34 switches
+- 35-68 ???
+- 64-79 F0-4
+- 80-95 ???
+- 96-97 Start/Stop
+- 98-127 ???
+- 128 reset
+- 129-160 S88
+- 161-191 ???
+- 192 reset
+- 193-224 S88
+- 225+ ???
