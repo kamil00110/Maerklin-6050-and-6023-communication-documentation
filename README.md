@@ -1,8 +1,10 @@
 # Märklin-6050-and-6023-communication-documentation
 > [!NOTE]
 > This documentation can contain errors or have missing parts. If you find something please create an Issiue.
+
 > [!TIP]
 > Addiionaly you can download an Webpage for testing all of these comands.
+
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
 Both use serial comunication with the folowing specs:
 
