@@ -28,8 +28,11 @@ Uses only These Serial Pins:
 
 The 6050 communication functions by sending numbers in binary. Sending ascii values from the 6023 can freeze it. 
 Which isn't a problem on systems using the Central unit 6020/6021/6022/6023/6223 because they will auto reset. 
+
 The Central Unit 6027/6029/6030 will need a manual reset. Behaviour of 6032 is unkown yet.
+
 Sending to a loco that is selected in a control 80f can crash the system.
+
 (6223/6023/6022 will only accept loco adresses 10/20/30/40)
 
 ## Sending the data:
