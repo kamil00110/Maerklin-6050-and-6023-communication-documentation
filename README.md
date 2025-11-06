@@ -4,12 +4,11 @@ Both use serial comunication with the folowing specs:
 
 ##6050:
 
--Baud: 2400
--Start bits: 1
--Word size: 8
--Stop bits: 2
--Parity: None
-
+- Baud: 2400
+- Start bits: 1
+- Word size: 8
+- Stop bits: 2
+- Parity: None
 
 Uses only These Serial Pins:
 Pin1 = TX
