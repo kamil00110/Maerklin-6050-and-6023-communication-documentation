@@ -29,6 +29,13 @@ button { padding: 8px 12px; margin: 4px; font-size: 14px; }
 </head>
 <body>
 <h2>Märklin Interface Web Console</h2>
+<label for="baudRateSelect">Baud Rate:</label>
+<select id="baudRateSelect">
+  <option value="1200">1200</option>
+  <option value="2400">2400 default</option>
+  <option value="3000">3000 can work</option>
+  <option value="4800">4800</option>
+</select>
 <button id="connect">🔌 Connect</button>
 <div class="commands">
   <input id="cmd" placeholder="Enter ASCII command (e.g. M 1 R, L 5 S 10)">
@@ -135,7 +142,8 @@ function getS88modul(addr){
    }
    if(type=="6050"){
       addr = Number(addr) + Number("192");
-      sendCmd(addr);
+      sendCmd(String(addr));
+	  
    }
 }
 
@@ -145,7 +153,7 @@ function getS88contact(addr){
    }
    if(type=="6050"){
       addr = Number(addr) + Number("128");
-      sendCmd(addr);
+      sendCmd(String(addr));
    }
 }
 function Stop(){
@@ -273,12 +281,12 @@ function setErrorLED(on = true) {
   else led.classList.remove('error');
 }
 
-async function connect() {
+async function connect(baudRate=2400) {
   try {
     setErrorLED(false);
     // Ask for serial device
     port = await navigator.serial.requestPort();
-    await port.open({ baudRate: 2400, dataBits: 8, stopBits: 2, parity: 'none' });
+    await port.open({ baudRate: Number(baudRate), dataBits: 8, stopBits: 2, parity: 'none' });
 
     writer = port.writable.getWriter();
     reader = port.readable.getReader();
@@ -354,7 +362,11 @@ async function updateCTS() {
   }
   setTimeout(updateCTS, 200);
 }
-document.getElementById('connect').onclick = connect;
+document.getElementById('connect').onclick = () => {
+  const baudRate = Number(document.getElementById('baudRateSelect').value);
+  connect(baudRate);
+};
+
 
 document.getElementById('send').onclick = () => {
   const cmdInput = document.getElementById('cmd').value;
@@ -440,4 +452,5 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
