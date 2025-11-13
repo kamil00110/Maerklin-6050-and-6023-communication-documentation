@@ -13,7 +13,7 @@ Both use serial comunication with the folowing specs:
 
 ## 6050:
 
-- Baud: 2400
+- Baud: 2400  //on my 6050 a non standart baudrate of exactl 3000 is possible
 - Start bits: 1
 - Word size: 8
 - Stop bits: 2
