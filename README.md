@@ -183,7 +183,7 @@ can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control U
 - 64-79 F0-4
 - 80-95 ???
 - 96-97 Start/Stop
-- 98-127 ???
+- 98-127 more start/stop?
 - 128 reset
 - 129-160 S88
 - 161-191 ???
