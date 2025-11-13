@@ -355,10 +355,20 @@ async function updateCTS() {
   setTimeout(updateCTS, 200);
 }
 document.getElementById('connect').onclick = connect;
+
 document.getElementById('send').onclick = () => {
   const cmdInput = document.getElementById('cmd').value;
   sendCmd(cmdInput);
 };
+
+// Trigger sendCmd when Enter is pressed in the input
+document.getElementById('cmd').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    const cmdInput = document.getElementById('cmd').value;
+    sendCmd(cmdInput);
+  }
+});
+
 
 
 
@@ -430,3 +440,4 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
