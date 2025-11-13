@@ -189,4 +189,4 @@ can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control U
 - 161-191 even more s88. according to the manual shold stop at 31 but the interface reads up to 61
 - 192 reset
 - 193-224 S88
-- 225+ ???
+- 225+ even more s88. according to the manual shold stop at 31 but the interface reads up to 61
