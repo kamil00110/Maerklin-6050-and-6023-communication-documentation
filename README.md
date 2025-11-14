@@ -22,7 +22,7 @@ Both use serial comunication with the folowing specs:
 Uses only These Serial Pins:
 
 - Pin1 = TX
-- Pin2 = NC
+- Pin2 = RTS
 - Pin3 = GND
 - Pin4 = RX
 - Pin5 = CTS
@@ -105,7 +105,7 @@ It is limmited to `4` s88 modules (`64 contacts`) and it auto shut offs solenoid
 Uses only These Serial Pins:
 
 - Pin1 = TX
-- Pin2 = Used but Unknown yet
+- Pin2 = RTS
 - Pin3 = GND
 - Pin4 = RX
 - Pin5 = CTS
