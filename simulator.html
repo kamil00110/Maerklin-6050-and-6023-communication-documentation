@@ -173,14 +173,14 @@ fileInput.addEventListener('change', (ev) => {
   };
   readerF.readAsText(f);
 });
-
 function getS88Byte(moduleIndex, byteIndex) {
-  // moduleIndex 0..62, byteIndex 0 or 1 (0 = contacts 0-7, 1 = 8-15)
   let val = 0;
   for (let bit = 0; bit < 8; bit++) {
     const contact = byteIndex*8 + bit;
     const el = document.getElementById(`m${moduleIndex}_c${contact}`);
-    if (el && el.checked) val |= (1 << bit);
+    if (el && el.checked) {
+      val |= (1 << (7 - bit));  // flip bit order: MSB first
+    }
   }
   return val & 0xFF;
 }
