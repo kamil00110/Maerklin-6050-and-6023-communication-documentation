@@ -8,7 +8,7 @@
 
 > [!TIP]
 > You can simulate the behaviour of the 6050/6051 here: [Märklin Intercace Controll](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/simulator.html)
-
+> programs like com0com are needed for simulation.
 
 
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
