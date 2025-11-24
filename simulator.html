@@ -24,7 +24,6 @@
 <body>
 <header>
   <h1 style="margin:0;font-size:18px;">Märklin 6050 Simulator</h1>
-  <div style="margin-left:8px;font-size:13px;color:#aaa;">(Web Serial)</div>
 </header>
 
 <div id="controls">
@@ -336,8 +335,8 @@ async function startReadLoop(){
             continue;
           }
           const m = moduleIndex - 1; // zero-based
-          const low = getS88Byte(m, 0);
-          const high = getS88Byte(m, 1);
+          const high = getS88Byte(m, 0);
+          const low = getS88Byte(m, 1);
           try { await writer.write(new Uint8Array([low])); } catch(e){ logMessage("Write error: " + e); }
           await sleep(10);
           try { await writer.write(new Uint8Array([high])); } catch(e){ logMessage("Write error: " + e); }
