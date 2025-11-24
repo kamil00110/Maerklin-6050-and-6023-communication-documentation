@@ -1,32 +1,48 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Märklin Interface Controller</title>
 <style>
+  /* Reset and general styles */
+  * { box-sizing: border-box; }
   body {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     background: #111;
     color: #eee;
-    padding: 16px;
+    padding: 20px;
     margin: 0;
   }
+
   h2, h3 {
-    margin: 12px 0 6px 0;
+    margin: 16px 0 8px 0;
     font-weight: 400;
   }
 
-  /* Header and controls */
-  header, .commands {
+  /* Layout sections */
+  header, .commands, .quick-actions, .line-status, .system-buttons {
     display: flex;
-    gap: 8px;
-    align-items: center;
     flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
     margin-bottom: 12px;
   }
+
+  /* Inputs and selects */
+  input[type="number"], input[type="text"], select {
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid #333;
+    background: #111;
+    color: #eee;
+    font-size: 14px;
+  }
+
+  input[type="number"] { width: 60px; }
+
+  /* Buttons */
   button {
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 6px;
     border: 1px solid #444;
     background: #222;
@@ -34,61 +50,40 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  button:hover:not(:disabled) {
-    background: #333;
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
+  button:hover:not(:disabled) { background: #333; }
+  button:disabled { opacity: 0.5; cursor: default; }
 
-  /* Input fields */
-  input, select {
-    padding: 6px;
-    border-radius: 4px;
-    border: 1px solid #333;
-    background: #111;
-    color: #eee;
-  }
-  input[type="number"] {
-    width: 60px;
-  }
-
-  /* Log/output areas */
+  /* Logs and output */
   #output, #log {
     width: 100%;
     padding: 10px;
-    background: #000;
-    color: #0f0;
-    font-family: monospace;
     border-radius: 6px;
     border: 1px solid #333;
+    background: #000;
+    font-family: monospace;
     overflow-y: auto;
   }
-  #log {
-    color: #bfbfbf;
-    height: 200px;
-    margin-top: 8px;
-  }
+  #output { color: #0f0; height: 300px; }
+  #log { color: #bfbfbf; height: 200px; margin-top: 8px; }
 
-  /* S88 Table Container */
+  /* S88 Table */
   #s88Container {
     margin-top: 12px;
     max-height: 480px;
     overflow: auto;
     border: 1px solid #333;
     background: #0f0f0f;
-    padding: 8px;
+    padding: 10px;
     border-radius: 6px;
   }
   table {
+    width: 100%;
     border-collapse: collapse;
     font-size: 12px;
-    width: 100%;
   }
   th, td {
     border: 1px solid #333;
-    padding: 4px;
+    padding: 6px;
     text-align: center;
     background: #0b0b0b;
   }
@@ -98,39 +93,28 @@
     background: #161616;
     z-index: 2;
   }
-  .top-row { position: sticky; top: 0; background: #111; z-index: 3; }
-  .checkbox { width: 16px; height: 16px; }
-  .module-col { min-width: 30px; }
 
   /* LEDs */
   .led {
     display: inline-block;
     width: 20px;
     height: 20px;
-    margin-right: 10px;
     border-radius: 50%;
     background: #333;
     text-align: center;
     line-height: 20px;
     font-size: 10px;
+    margin-right: 8px;
     transition: 0.2s;
   }
   .led.on { background: #0f0; }
   .led.error { background: #f00; }
-  #leds { margin-top: 10px; }
 
   /* Footer */
-  #footer {
-    margin-top: 16px;
-    color: #999;
-    font-size: 12px;
-  }
+  #footer { margin-top: 16px; color: #999; font-size: 12px; }
 
-  /* Quick adjustments */
-  .small {
-    font-size: 12px;
-    padding: 4px 8px;
-  }
+  /* Small adjustments */
+  .small { font-size: 12px; padding: 4px 8px; }
 </style>
 </head>
 <body>
@@ -154,7 +138,7 @@
 </div>
 
 <h3>Quick Actions:</h3>
-<div class="commands">
+<div class="quick-actions">
   <button onclick="Stop()">Emergency Stop</button>
   <button onclick="Go()">Go</button>
 </div>
@@ -210,7 +194,6 @@
     <option value="2+3+4">F2+F3+F4</option>
     <option value="1+2+3+4">F1+F2+F3+F4</option>
   </select>
-  <label for="Funktion">function</label>
   <button onclick="Lok(document.getElementById('Lok').value || 1,document.getElementById('Speed').value, document.getElementById('Funktion').value)">Lok</button>
 </div>
 
@@ -230,14 +213,14 @@
 </div>
 
 <h3>Line Status:</h3>
-<div id="leds">
+<div class="line-status" id="leds">
   <span id="led-cts" class="led">CTS</span>
   <span id="led-rx" class="led">RX</span>
   <span id="led-tx" class="led">TX</span>
   <span id="led-err" class="led">ERR</span>
 </div>
 
-<div class="commands">
+<div class="system-buttons">
   <button onclick="setsystem(6050)">Set as 6050</button>
   <button onclick="setsystem(6023)">Set as 6023</button>
 </div>
@@ -595,6 +578,7 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
 
