@@ -65,11 +65,11 @@ Sending to a loco that is selected in a control 80f can crash the system.
 - Set loco Speed and Function: `X Y` <-- X stands for speed(`0-14`)+function (`+16=on +0=off`), Y stands for address `1-80`   can only be done this way.
   - exampe loco 31 speed 3 funktion 1: speed(3)+16: `20 31`
 
-- Read s88 unit: `X` <-- X stands for `192+address(1-31)` 1 unit has 16 contacts. according to märklin 60128 software
+- Read s88 unit: `X` <-- X stands for `192+address(1-31(officially))` 1 unit has 16 contacts. according to märklin 60128 software 63(unofficially)
   - example reed s88 module 5: `197`
   - response binary example `0`=unset `1`=set: `00110101 1000110`
 
-- Read multiple s88 contacts: `X` <-- X stands for `128+address(1-31)`. according to märklin 60128 software
+- Read multiple s88 contacts: `X` <-- X stands for `128+address(1-31(officially))`. according to märklin 60128 software 63(unofficially)
   - example reed s88 module 1-5: `133`
   - response binary example `0`=unset `1`=set: `"00110101 1000110" *5`
 
