@@ -41,23 +41,11 @@
 <section id="s88Container" aria-label="S88 table"></section>
 
 <div id="footer">
-  <div>63 modules × 16 contacts = 1008 contacts. Module bytes are sent LSB-first (contacts 0–7 = first byte, 8–15 = second byte).</div>
-  <div>Single-module read mapping: module = command - 192 (193 → module 1 ... 255 → module 63).</div>
+ 
 </div>
 
 <script>
-/* ======= Märklin 6050 Simulator (single-file) ======= */
-/* Behavior:
-   - Web Serial API at 2400-8-N-1
-   - S88 table: 63 modules x 16 contacts, saved to cookie "s88"
-   - Commands implemented as requested
-   - Multi-module: 129-191 -> moduleCount = cmd - 128 (1..63)
-   - Single-module: 193-255 -> moduleIndex = cmd - 192 (1..63) => send two bytes LSB-first
-   - 192 remains S88 reset (All S88 modules reset)
-   - Module bytes sent as individual 8-bit writes with small delay
-*/
 
-/* ---------- UI elements ---------- */
 const connectBtn = document.getElementById('connectBtn');
 const disconnectBtn = document.getElementById('disconnectBtn');
 const clearBtn = document.getElementById('clearBtn');
@@ -72,16 +60,14 @@ let reader = null;
 let writer = null;
 let reading = false;
 
-/* ---------- Logging ---------- */
 function logMessage(msg) {
   const ts = new Date().toLocaleTimeString();
   logEl.textContent += `[${ts}] ${msg}\n`;
   logEl.scrollTop = logEl.scrollHeight;
 }
 
-/* ---------- Cookie handling ---------- */
 function saveS88ToCookie() {
-  // store as 1008-length string of '0'/'1'
+  
   const bits = [];
   for (let m = 0; m < 63; m++) {
     for (let c = 0; c < 16; c++) {
@@ -90,7 +76,7 @@ function saveS88ToCookie() {
     }
   }
   const val = bits.join('');
-  // cookie size OK for this amount
+
   document.cookie = "s88=" + encodeURIComponent(val) + "; path=/; max-age=31536000";
 }
 
@@ -112,9 +98,8 @@ function loadS88FromCookie() {
   }
 }
 
-/* ---------- S88 Table generation ---------- */
 function generateS88Table() {
-  // create table header and rows
+
   let html = '<table><thead><tr><th class="module-col">Mod</th>';
   for (let c = 0; c < 16; c++) html += `<th>C${c}</th>`;
   html += '</tr></thead><tbody>';
@@ -128,7 +113,7 @@ function generateS88Table() {
   html += '</tbody></table>';
   s88Container.innerHTML = html;
 
-  // attach onchange to all checkboxes to save
+
   for (let m = 0; m < 63; m++) {
     for (let c = 0; c < 16; c++) {
       const el = document.getElementById(`m${m}_c${c}`);
@@ -142,7 +127,6 @@ function generateS88Table() {
 
 generateS88Table();
 
-/* ---------- Clear / Export / Import ---------- */
 clearBtn.addEventListener('click', () => {
   for (let m = 0; m < 63; m++) for (let c = 0; c < 16; c++) {
     const el = document.getElementById(`m${m}_c${c}`);
@@ -191,7 +175,6 @@ fileInput.addEventListener('change', (ev) => {
   readerF.readAsText(f);
 });
 
-/* ---------- Utility: get module byte from table ---------- */
 function getS88Byte(moduleIndex, byteIndex) {
   // moduleIndex 0..62, byteIndex 0 or 1 (0 = contacts 0-7, 1 = 8-15)
   let val = 0;
@@ -203,7 +186,6 @@ function getS88Byte(moduleIndex, byteIndex) {
   return val & 0xFF;
 }
 
-/* ---------- Web Serial handling ---------- */
 async function disconnectSerial() {
   try {
     reading = false;
@@ -251,10 +233,9 @@ connectBtn.addEventListener('click', async () => {
   }
 });
 
-/* small helper to sleep ms */
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
-/* ---------- Main read loop & command processing ---------- */
+
 async function startReadLoop(){
   if (!reader || !writer) return;
   reading = true;
@@ -347,10 +328,7 @@ async function startReadLoop(){
           continue;
         }
 
-        // Single module read 193–255 -> moduleIndex = cmd - 192 (1..63)
         if (cmd >= 193 && cmd <= 255) {
-          // 255 is also reported as invalid in prior logic; but here user expects 193..255 mapping
-          // We'll treat 255 as module 63 (since 255-192=63) — if admin wants 255 invalid, change here.
           inputBuffer.shift();
           const moduleIndex = cmd - 192; // 1..63
           if (moduleIndex < 1 || moduleIndex > 63) {
@@ -368,24 +346,22 @@ async function startReadLoop(){
           continue;
         }
 
-        // Invalid / other handling
         if (cmd === 255) {
           logMessage("Invalid command");
           inputBuffer.shift();
           continue;
         }
 
-        // Any other bytes: skip
+        
         inputBuffer.shift();
-      } // end while buffer
-    } // end while reading
+      } 
+    } 
   } catch (error) {
     logMessage("Read loop error: " + error);
     await disconnectSerial();
   }
 }
 
-/* ---------- helper disconnect used above ---------- */
 async function disconnectSerial(){
   try {
     reading = false;
@@ -410,10 +386,8 @@ async function disconnectSerial(){
   }
 }
 
-/* make sure to save S88 periodically (in case user toggles programmatically) */
 setInterval(saveS88ToCookie, 5000);
 
-/* On page load, restore cookie (already called by generateS88Table), and ensure buttons */
 window.addEventListener('beforeunload', async () => { if (port) await disconnectSerial(); });
 
 </script>
