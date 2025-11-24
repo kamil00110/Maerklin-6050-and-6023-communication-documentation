@@ -163,11 +163,11 @@
 </div>
 
 <div class="commands">
-  <input type="number" id="gs88modul" min="1" max="16" value="1">
+  <input type="number" id="gs88modul" min="1" max="63" value="1">
   <label for="gs88modul">S88 Module</label>
   <button onclick="getS88modul(document.getElementById('gs88modul').value || 1)">Read Module</button>
 
-  <input type="number" id="gs88contact" min="1" max="992" value="1">
+  <input type="number" id="gs88contact" min="1" max="63" value="1">
   <label for="gs88contact">S88 Contact</label>
   <button onclick="getS88contact(document.getElementById('gs88contact').value || 1)">Read Contact</button>
 </div>
@@ -584,6 +584,7 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
 
