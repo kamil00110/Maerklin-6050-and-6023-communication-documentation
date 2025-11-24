@@ -7,7 +7,7 @@
 > Or test it here: [Märklin Intercace Controll](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/)
 
 > [!TIP]
-> You can simulate the behaviour of the 6050/6051 here: [Märklin Intercace Controll](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/simulator.html)
+> You can simulate the behaviour of the 6050/6051 here: [6050 Interface Simulator](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/simulator.html)
 > programs like com0com are needed for simulation.
 
 
