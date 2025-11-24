@@ -54,8 +54,8 @@ button { padding: 8px 12px; margin: 4px; font-size: 14px; }
 <button onclick="setSwitch(document.getElementById('turnout').value || 1,document.getElementById('branch').value)">Turnout Branch</button>
 
 <input type="number" id="OFF" min="1" max="255" value="1" style="width:50px">
-<label for="turnout">address</label>
-<button onclick="SwitchOFF(document.getElementById('OFF').value)">Turnout Branch</button>
+<label for="OFF">address</label>
+<button onclick="SwitchOFF(document.getElementById('OFF').value)">Turnout OFF</button>
 	
 <br>
 <input type="number" id="gs88modul" min="1" max="16" value="1" style="width:50px">
@@ -466,6 +466,7 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
 
