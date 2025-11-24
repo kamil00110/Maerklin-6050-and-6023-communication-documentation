@@ -265,10 +265,9 @@ function EchoMode(mode){
    }
 }
 
-function SwitchOFF(address){
+function SwitchOFF(addr){
 	if(type=="6023"){
 	  log("automated in 6023/6223");
-      sendCmd("E "+mode);
    }
    if(type=="6050"){
       sendCmd("32 "+addr);
@@ -467,6 +466,7 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
 
