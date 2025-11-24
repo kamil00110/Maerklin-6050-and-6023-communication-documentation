@@ -438,8 +438,11 @@ async function startContinuousReadLoop() {
       if (value) {
 	    blinkLED('led-rx', 100);
         const text = decoder.decode(value);
-        lastResponse = text;
-        log('RX: ' + text.trim());
+        const binaryString = Array.from(value)
+           .map(byte => byte.toString(2).padStart(8, '0'))
+           .join(' ');
+           lastResponse = binaryString;
+        log('RX: ' + binaryString);
       }
     }
   } catch (err) {
@@ -577,6 +580,7 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
 
