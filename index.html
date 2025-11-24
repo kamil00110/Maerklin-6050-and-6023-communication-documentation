@@ -52,6 +52,11 @@ button { padding: 8px 12px; margin: 4px; font-size: 14px; }
   <option value="1">green</option>
 </select>
 <button onclick="setSwitch(document.getElementById('turnout').value || 1,document.getElementById('branch').value)">Turnout Branch</button>
+
+<input type="number" id="OFF" min="1" max="255" value="1" style="width:50px">
+<label for="turnout">address</label>
+<button onclick="SwitchOFF(document.getElementById('OFF').value)">Turnout Branch</button>
+	
 <br>
 <input type="number" id="gs88modul" min="1" max="16" value="1" style="width:50px">
 <label for="gs88modul">address</label>
@@ -260,6 +265,16 @@ function EchoMode(mode){
    }
 }
 
+function SwitchOFF(address){
+	if(type=="6023"){
+	  log("automated in 6023/6223");
+      sendCmd("E "+mode);
+   }
+   if(type=="6050"){
+      sendCmd("32 "+addr);
+   }
+}
+	
 function setsystem(system){
    type = system;
 }
@@ -452,5 +467,6 @@ function waitForResponse(timeoutMs) {
 
 </body>
 </html>
+
 
 
