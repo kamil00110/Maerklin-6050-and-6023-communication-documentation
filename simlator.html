@@ -1,0 +1,422 @@
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Märklin 6050 Simulator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; background:#111; color:#eee; padding:12px; }
+  header { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+  button { padding:6px 10px; border-radius:6px; border:1px solid #444; background:#222; color:#fff; cursor:pointer; }
+  button:disabled { opacity:0.5; cursor:default; }
+  #log { white-space:pre-wrap; background:#000; color:#bfbfbf; padding:10px; height:200px; overflow:auto; border-radius:6px; border:1px solid #333; margin-top:8px; }
+  #controls { display:flex; gap:8px; flex-wrap:wrap; }
+  #s88Container { margin-top:12px; max-height:480px; overflow:auto; border:1px solid #333; background:#0f0f0f; padding:8px; border-radius:6px; }
+  table { border-collapse:collapse; font-size:12px; }
+  th, td { border:1px solid #333; padding:4px; text-align:center; background:#0b0b0b; }
+  th { position:sticky; top:0; background:#161616; z-index:2; }
+  .checkbox { width:16px; height:16px; }
+  .module-col { min-width:30px; }
+  .top-row { position:sticky; top:0; background:#111; z-index:3; }
+  #footer { margin-top:10px; color:#999; font-size:12px; }
+  .small { font-size:12px; padding:4px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0;font-size:18px;">Märklin 6050 Simulator</h1>
+  <div style="margin-left:8px;font-size:13px;color:#aaa;">(Web Serial)</div>
+</header>
+
+<div id="controls">
+  <button id="connectBtn">Connect Serial</button>
+  <button id="disconnectBtn" disabled>Disconnect</button>
+  <button id="clearBtn">Clear S88</button>
+  <button id="exportBtn">Export S88</button>
+  <button id="importBtn">Import S88</button>
+  <input id="fileInput" type="file" accept=".txt" style="display:none">
+</div>
+
+<pre id="log"></pre>
+
+<section id="s88Container" aria-label="S88 table"></section>
+
+<div id="footer">
+  <div>63 modules × 16 contacts = 1008 contacts. Module bytes are sent LSB-first (contacts 0–7 = first byte, 8–15 = second byte).</div>
+  <div>Single-module read mapping: module = command - 192 (193 → module 1 ... 255 → module 63).</div>
+</div>
+
+<script>
+/* ======= Märklin 6050 Simulator (single-file) ======= */
+/* Behavior:
+   - Web Serial API at 2400-8-N-1
+   - S88 table: 63 modules x 16 contacts, saved to cookie "s88"
+   - Commands implemented as requested
+   - Multi-module: 129-191 -> moduleCount = cmd - 128 (1..63)
+   - Single-module: 193-255 -> moduleIndex = cmd - 192 (1..63) => send two bytes LSB-first
+   - 192 remains S88 reset (All S88 modules reset)
+   - Module bytes sent as individual 8-bit writes with small delay
+*/
+
+/* ---------- UI elements ---------- */
+const connectBtn = document.getElementById('connectBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
+const clearBtn = document.getElementById('clearBtn');
+const exportBtn = document.getElementById('exportBtn');
+const importBtn = document.getElementById('importBtn');
+const fileInput = document.getElementById('fileInput');
+const logEl = document.getElementById('log');
+const s88Container = document.getElementById('s88Container');
+
+let port = null;
+let reader = null;
+let writer = null;
+let reading = false;
+
+/* ---------- Logging ---------- */
+function logMessage(msg) {
+  const ts = new Date().toLocaleTimeString();
+  logEl.textContent += `[${ts}] ${msg}\n`;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+/* ---------- Cookie handling ---------- */
+function saveS88ToCookie() {
+  // store as 1008-length string of '0'/'1'
+  const bits = [];
+  for (let m = 0; m < 63; m++) {
+    for (let c = 0; c < 16; c++) {
+      const el = document.getElementById(`m${m}_c${c}`);
+      bits.push(el && el.checked ? '1' : '0');
+    }
+  }
+  const val = bits.join('');
+  // cookie size OK for this amount
+  document.cookie = "s88=" + encodeURIComponent(val) + "; path=/; max-age=31536000";
+}
+
+function loadS88FromCookie() {
+  const c = document.cookie.split('; ').find(x => x.startsWith('s88='));
+  if (!c) return;
+  try {
+    const val = decodeURIComponent(c.substring(4));
+    if (val.length < 63*16) return;
+    let i = 0;
+    for (let m = 0; m < 63; m++) {
+      for (let b = 0; b < 16; b++) {
+        const el = document.getElementById(`m${m}_c${b}`);
+        if (el) el.checked = val[i++] === '1';
+      }
+    }
+  } catch (e) {
+    console.warn("Failed loading cookie:", e);
+  }
+}
+
+/* ---------- S88 Table generation ---------- */
+function generateS88Table() {
+  // create table header and rows
+  let html = '<table><thead><tr><th class="module-col">Mod</th>';
+  for (let c = 0; c < 16; c++) html += `<th>C${c}</th>`;
+  html += '</tr></thead><tbody>';
+  for (let m = 0; m < 63; m++) {
+    html += `<tr><td class="module-col">${m+1}</td>`;
+    for (let c = 0; c < 16; c++) {
+      html += `<td><input id="m${m}_c${c}" class="checkbox" type="checkbox" /></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  s88Container.innerHTML = html;
+
+  // attach onchange to all checkboxes to save
+  for (let m = 0; m < 63; m++) {
+    for (let c = 0; c < 16; c++) {
+      const el = document.getElementById(`m${m}_c${c}`);
+      if (!el) continue;
+      el.addEventListener('change', saveS88ToCookie);
+    }
+  }
+
+  loadS88FromCookie();
+}
+
+generateS88Table();
+
+/* ---------- Clear / Export / Import ---------- */
+clearBtn.addEventListener('click', () => {
+  for (let m = 0; m < 63; m++) for (let c = 0; c < 16; c++) {
+    const el = document.getElementById(`m${m}_c${c}`);
+    if (el) el.checked = false;
+  }
+  saveS88ToCookie();
+  logMessage("S88 cleared.");
+});
+
+exportBtn.addEventListener('click', () => {
+  // export cookie string as file
+  const bits = [];
+  for (let m = 0; m < 63; m++) for (let c = 0; c < 16; c++) {
+    const el = document.getElementById(`m${m}_c${c}`);
+    bits.push(el && el.checked ? '1' : '0');
+  }
+  const blob = new Blob([bits.join('')], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 's88_export.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+  logMessage("S88 exported.");
+});
+
+importBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const readerF = new FileReader();
+  readerF.onload = () => {
+    const txt = readerF.result.trim();
+    if (txt.length < 63*16) {
+      logMessage("Import failed: file too short.");
+      return;
+    }
+    let i = 0;
+    for (let m = 0; m < 63; m++) for (let c = 0; c < 16; c++) {
+      const el = document.getElementById(`m${m}_c${c}`);
+      if (el) el.checked = txt[i++] === '1';
+    }
+    saveS88ToCookie();
+    logMessage("S88 imported.");
+  };
+  readerF.readAsText(f);
+});
+
+/* ---------- Utility: get module byte from table ---------- */
+function getS88Byte(moduleIndex, byteIndex) {
+  // moduleIndex 0..62, byteIndex 0 or 1 (0 = contacts 0-7, 1 = 8-15)
+  let val = 0;
+  for (let bit = 0; bit < 8; bit++) {
+    const contact = byteIndex*8 + bit;
+    const el = document.getElementById(`m${moduleIndex}_c${contact}`);
+    if (el && el.checked) val |= (1 << bit);
+  }
+  return val & 0xFF;
+}
+
+/* ---------- Web Serial handling ---------- */
+async function disconnectSerial() {
+  try {
+    reading = false;
+    if (reader) {
+      try { await reader.cancel(); } catch(e){ }
+      reader.releaseLock();
+      reader = null;
+    }
+    if (writer) {
+      try { writer.releaseLock(); } catch(e) {}
+      writer = null;
+    }
+    if (port) {
+      try { await port.close(); } catch(e) {}
+      port = null;
+    }
+    connectBtn.disabled = false;
+    disconnectBtn.disabled = true;
+    logMessage("Disconnected.");
+  } catch (err) {
+    logMessage("Disconnect error: " + err);
+  }
+}
+
+disconnectBtn.addEventListener('click', disconnectSerial);
+
+connectBtn.addEventListener('click', async () => {
+  if (!("serial" in navigator)) {
+    logMessage("Web Serial API not available in this browser.");
+    return;
+  }
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate:2400, dataBits:8, stopBits:1, parity:"none" });
+
+    // Acquire writer and reader
+    writer = port.writable.getWriter();
+    reader = port.readable.getReader();
+    connectBtn.disabled = true;
+    disconnectBtn.disabled = false;
+    logMessage("Connected to serial port.");
+    startReadLoop();
+  } catch (err) {
+    logMessage("Connection failed: " + err);
+  }
+});
+
+/* small helper to sleep ms */
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+/* ---------- Main read loop & command processing ---------- */
+async function startReadLoop(){
+  if (!reader || !writer) return;
+  reading = true;
+  const inputBuffer = []; // array of bytes (numbers 0..255)
+  try {
+    while (reading) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) {
+        for (const b of value) inputBuffer.push(b);
+      }
+
+      // process commands while possible
+      while (inputBuffer.length > 0) {
+        const cmd = inputBuffer[0];
+
+        // 0–31 loco speed/function/direction
+        if (cmd <= 31) {
+          if (inputBuffer.length < 2) break; // wait for loco address
+          inputBuffer.shift();
+          const locoAddr = inputBuffer.shift();
+          let speed = cmd & 0x0F; // 0..15, we treat 15 as direction toggle
+          const functionOn = (cmd & 0x10) !== 0;
+          const dirToggle = (speed === 15);
+          if (dirToggle) speed = 0;
+          logMessage(`loco address ${locoAddr} speed set to ${speed} function ${functionOn?"on":"off"} direction ${dirToggle?"toggled":"normal"}`);
+          continue;
+        }
+
+        // 32-34 switch
+        if (cmd === 32 || cmd === 33 || cmd === 34) {
+          if (inputBuffer.length < 2) break;
+          inputBuffer.shift();
+          const addr = inputBuffer.shift();
+          const txt = cmd===32 ? 'off' : cmd===33 ? 'left' : 'right';
+          logMessage(`switch turned ${txt} address: ${addr}`);
+          continue;
+        }
+
+        // Unknown function ranges 35–63 and 80–95
+        if ((cmd >= 35 && cmd <= 63) || (cmd >= 80 && cmd <= 95)) {
+          logMessage(`Unknown function command: ${cmd}`);
+          inputBuffer.shift();
+          continue;
+        }
+
+        // Function-only 64–79 (F1–F4)
+        if (cmd >= 64 && cmd <= 79) {
+          if (inputBuffer.length < 2) break;
+          inputBuffer.shift();
+          const addr = inputBuffer.shift();
+          const table = {
+            64:"all off",65:"F1",66:"F2",67:"F1-F2",
+            68:"F3",69:"F1+F3",70:"F2-F3",71:"F1-F3",
+            72:"F4",73:"F1+F4",74:"F2+F4",75:"F1+F2+F4",
+            76:"F3-F4",77:"F1+F3+F4",78:"F2-F4",79:"F1-F4"
+          };
+          logMessage(`loco address ${addr} functions activated: ${table[cmd] || cmd}`);
+          continue;
+        }
+
+        // 96 / 97 start/stop
+        if (cmd === 96) { logMessage("started"); inputBuffer.shift(); continue; }
+        if (cmd === 97) { logMessage("stopped"); inputBuffer.shift(); continue; }
+
+        // S88 reset commands 128 or 192
+        if (cmd === 128 || cmd === 192) { logMessage("All S88 modules reset"); inputBuffer.shift(); continue; }
+
+        // Module requests 129–191 (multi-module response)
+        if (cmd >= 129 && cmd <= 191) {
+          inputBuffer.shift();
+          const moduleCount = cmd - 128; // 1..63
+          // clamp
+          const mc = Math.max(0, Math.min(63, moduleCount));
+          for (let m = 0; m < mc; m++) {
+            // module m -> use module index m (0-based)
+            const low = getS88Byte(m, 0);
+            const high = getS88Byte(m, 1);
+            // send low then high, separately with delay
+            try {
+              await writer.write(new Uint8Array([low]));
+            } catch(e){ logMessage("Write error: " + e); }
+            await sleep(10);
+            try {
+              await writer.write(new Uint8Array([high]));
+            } catch(e){ logMessage("Write error: " + e); }
+            await sleep(10);
+          }
+          logMessage(`Sent ${mc*16} bits from table (${mc*2} bytes)`);
+          continue;
+        }
+
+        // Single module read 193–255 -> moduleIndex = cmd - 192 (1..63)
+        if (cmd >= 193 && cmd <= 255) {
+          // 255 is also reported as invalid in prior logic; but here user expects 193..255 mapping
+          // We'll treat 255 as module 63 (since 255-192=63) — if admin wants 255 invalid, change here.
+          inputBuffer.shift();
+          const moduleIndex = cmd - 192; // 1..63
+          if (moduleIndex < 1 || moduleIndex > 63) {
+            logMessage(`Single-module read out of range: cmd=${cmd}`);
+            continue;
+          }
+          const m = moduleIndex - 1; // zero-based
+          const low = getS88Byte(m, 0);
+          const high = getS88Byte(m, 1);
+          try { await writer.write(new Uint8Array([low])); } catch(e){ logMessage("Write error: " + e); }
+          await sleep(10);
+          try { await writer.write(new Uint8Array([high])); } catch(e){ logMessage("Write error: " + e); }
+          await sleep(10);
+          logMessage(`Sent module #${moduleIndex} (16 bits)`);
+          continue;
+        }
+
+        // Invalid / other handling
+        if (cmd === 255) {
+          logMessage("Invalid command");
+          inputBuffer.shift();
+          continue;
+        }
+
+        // Any other bytes: skip
+        inputBuffer.shift();
+      } // end while buffer
+    } // end while reading
+  } catch (error) {
+    logMessage("Read loop error: " + error);
+    await disconnectSerial();
+  }
+}
+
+/* ---------- helper disconnect used above ---------- */
+async function disconnectSerial(){
+  try {
+    reading = false;
+    if (reader) {
+      try { await reader.cancel(); } catch(e){}
+      try { reader.releaseLock(); } catch(e){}
+      reader = null;
+    }
+    if (writer) {
+      try { writer.releaseLock(); } catch(e){}
+      writer = null;
+    }
+    if (port) {
+      try { await port.close(); } catch(e){}
+      port = null;
+    }
+    connectBtn.disabled = false;
+    disconnectBtn.disabled = true;
+    logMessage("Disconnected.");
+  } catch (err) {
+    logMessage("Disconnect error: " + err);
+  }
+}
+
+/* make sure to save S88 periodically (in case user toggles programmatically) */
+setInterval(saveS88ToCookie, 5000);
+
+/* On page load, restore cookie (already called by generateS88Table), and ensure buttons */
+window.addEventListener('beforeunload', async () => { if (port) await disconnectSerial(); });
+
+</script>
+</body>
+</html>
+
