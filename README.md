@@ -6,6 +6,10 @@
 > Addionaly you can download an Webpage for testing all of these comands.
 > Or test it here: [Märklin Intercace Controll](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/)
 
+> [!TIP]
+> You can simulate the behaviour of the 6050/6051 here: [Märklin Intercace Controll](https://kamil00110.github.io/Maerklin-6050-and-6023-communication-documentation/simulator.html)
+
+
 
 This is an documutation that explains how the Märklin 6050/6051 and 6023/6223 comunicate
 
