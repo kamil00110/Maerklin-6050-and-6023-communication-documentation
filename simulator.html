@@ -45,60 +45,133 @@
   <div id="switchTable" style="display:grid; grid-template-columns:repeat(17, 20px); gap:2px;"></div>
 </section>
 
+<section id="locoContainer" aria-label="Loco table" style="margin-top:12px; max-height:480px; overflow:auto; border:1px solid #333; background:#0f0f0f; padding:8px; border-radius:6px;">
+  <h3 style="margin:4px 0;">Loco Table</h3>
+  <table id="locoTable" style="width:100%; border-collapse:collapse; font-size:12px;">
+    <thead>
+      <tr style="background:#161616; position:sticky; top:0;">
+        <th>Address</th>
+        <th>Speed</th>
+        <th>Direction</th>
+        <th>F0</th>
+        <th>F1</th>
+        <th>F2</th>
+        <th>F3</th>
+        <th>F4</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
-  const switchTable = document.getElementById('switchTable');
-  const switchCount = 255;
-  const switches = [];
+  const locoTableBody = document.querySelector('#locoTable tbody');
 
-  function loadSwitches() {
-    const c = document.cookie.split('; ').find(x => x.startsWith('switches='));
-    let vals = Array(switchCount).fill(0); // 0 = gray, 1 = left (green), 2 = right (red)
-    if (c) {
-      try {
-        const txt = decodeURIComponent(c.substring(9));
-        for (let i = 0; i < Math.min(txt.length, switchCount); i++) {
-          const v = parseInt(txt[i]);
-          if ([0,1,2].includes(v)) vals[i] = v;
-        }
-      } catch(e){ console.warn("Failed loading switches cookie", e); }
+  function loadLocos() {
+    const c = document.cookie.split('; ').find(x => x.startsWith('locos='));
+    if (!c) return {};
+    try {
+      return JSON.parse(decodeURIComponent(c.substring(6)));
+    } catch(e){ console.warn("Failed loading locos cookie", e); return {}; }
+  }
+
+  function saveLocos(locos) {
+    document.cookie = "locos=" + encodeURIComponent(JSON.stringify(locos)) + "; path=/; max-age=31536000";
+  }
+
+  let locos = loadLocos();
+
+  function updateLocoRow(addr, data) {
+    let row = document.getElementById(`loco_${addr}`);
+    if (!row) {
+      row = document.createElement('tr');
+      row.id = `loco_${addr}`;
+      row.innerHTML = `<td>${addr}</td>
+                       <td class="speed"></td>
+                       <td class="dir"></td>
+                       <td class="f0"></td>
+                       <td class="f1"></td>
+                       <td class="f2"></td>
+                       <td class="f3"></td>
+                       <td class="f4"></td>`;
+      locoTableBody.appendChild(row);
     }
-    return vals;
+    row.querySelector('.speed').textContent = data.speed;
+    row.querySelector('.dir').textContent = data.direction;
+    row.querySelector('.f0').textContent = data.F0 ? 'On' : 'Off';
+    row.querySelector('.f1').textContent = data.F1 ? 'On' : 'Off';
+    row.querySelector('.f2').textContent = data.F2 ? 'On' : 'Off';
+    row.querySelector('.f3').textContent = data.F3 ? 'On' : 'Off';
+    row.querySelector('.f4').textContent = data.F4 ? 'On' : 'Off';
   }
 
-  function saveSwitches(vals) {
-    const str = vals.map(v => v.toString()).join('');
-    document.cookie = "switches=" + encodeURIComponent(str) + "; path=/; max-age=31536000";
+  window.processLocoSpeedF0 = function(addr, speed, F0,  dirToggle=false) {
+  if (!locos[addr]) {
+    locos[addr] = { speed: 0, direction: 'Fwd', F0:false, F1:false,F2:false,F3:false,F4:false };
   }
 
-  let switchVals = loadSwitches();
-  for (let i = 0; i < switchCount; i++) {
-    const dot = document.createElement('div');
-    dot.style.width = '16px';
-    dot.style.height = '16px';
-    dot.style.borderRadius = '50%';
-    dot.style.background = switchVals[i] === 1 ? 'green' : switchVals[i] === 2 ? 'red' : '#555';
-    dot.title = `Switch ${i+1}`;
-    switchTable.appendChild(dot);
-    switches.push(dot);
+  const loco = locos[addr];
+
+  if (dirToggle) {
+    loco.direction = loco.direction === 'Fwd' ? 'Rev' : 'Fwd';
+    loco.speed = 0;
+  } else {
+    loco.speed = speed;
+  }
+  loco.F0 = F0;
+
+  updateLocoRow(addr, loco);
+  saveLocos(locos);
+}
+
+
+  // Initialize table from cookie
+  for (const addr in locos) {
+    updateLocoRow(addr, locos[addr]);
   }
 
-  window.updateSwitch = function(index, value) {
-    if (index < 0 || index >= switchCount) return;
-    switches[index].style.background = value === 1 ? 'green' : value === 2 ? 'red' : '#555';
-    switchVals[index] = value;
-    saveSwitches(switchVals);
+// Handles F1-F4 function commands based on your string table
+window.processLocoF1F4 = function(addr, cmd) {
+  if (!locos[addr]) {
+    locos[addr] = { speed:0, direction:'Fwd', F0:false, F1:false,F2:false,F3:false,F4:false };
   }
 
-  window.processSwitchCommand = function(cmd, addr) {
-    const index = addr-1;
-    if (index < 0 || index >= switchCount) return;
+  const loco = locos[addr];
 
-    if (cmd === 33) updateSwitch(index, 1); // left / green
-    if (cmd === 34) updateSwitch(index, 2); // right / red
+  // Map command number 64–79 to F1–F4 states
+  const map = {
+    64:{F1:false,F2:false,F3:false,F4:false},
+    65:{F1:true ,F2:false,F3:false,F4:false},
+    66:{F1:false,F2:true ,F3:false,F4:false},
+    67:{F1:true ,F2:true ,F3:false,F4:false},
+    68:{F1:false,F2:false,F3:true ,F4:false},
+    69:{F1:true ,F2:false,F3:true ,F4:false},
+    70:{F1:false,F2:true ,F3:true ,F4:false},
+    71:{F1:true ,F2:true ,F3:true ,F4:false},
+    72:{F1:false,F2:false,F3:false,F4:true },
+    73:{F1:true ,F2:false,F3:false,F4:true },
+    74:{F1:false,F2:true ,F3:false,F4:true },
+    75:{F1:true ,F2:true ,F3:false,F4:true },
+    76:{F1:false,F2:false,F3:true ,F4:true },
+    77:{F1:true ,F2:false,F3:true ,F4:true },
+    78:{F1:false,F2:true ,F3:true ,F4:true },
+    79:{F1:true ,F2:true ,F3:true ,F4:true }
+  };
+
+  const Fstates = map[cmd] || {F1:false,F2:false,F3:false,F4:false};
+
+  // Update loco F1–F4 without touching speed/direction/F0
+  for (const f of ['F1','F2','F3','F4']) {
+    loco[f] = Fstates[f];
   }
+
+  updateLocoRow(addr, loco);
+  saveLocos(locos);
+}
 });
+
 </script>
+
 
 
 <div id="footer">
@@ -320,6 +393,8 @@ async function startReadLoop(){
           const dirToggle = (speed === 15);
           if (dirToggle) speed = 0;
           logMessage(`loco address ${locoAddr} speed set to ${speed} function ${functionOn?"on":"off"} direction ${dirToggle?"toggled":"normal"}`);
+ 
+          processLocoSpeedF0(locoAddr, speed, functionOn, dirToggle);
           continue;
         }
 
@@ -352,6 +427,7 @@ async function startReadLoop(){
             72:"F4",73:"F1+F4",74:"F2+F4",75:"F1+F2+F4",
             76:"F3-F4",77:"F1+F3+F4",78:"F2-F4",79:"F1-F4"
           };
+          processLocoF1F4(addr, cmd);
           logMessage(`loco address ${addr} functions activated: ${table[cmd] || cmd}`);
           continue;
         }
