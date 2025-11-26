@@ -45,6 +45,60 @@
   <div id="switchTable" style="display:grid; grid-template-columns:repeat(17, 20px); gap:2px;"></div>
 </section>
 
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const switchTable = document.getElementById('switchTable');
+  const switchCount = 255;
+  const switches = [];
+
+  function loadSwitches() {
+    const c = document.cookie.split('; ').find(x => x.startsWith('switches='));
+    let vals = Array(switchCount).fill(0); // 0 = gray, 1 = left (green), 2 = right (red)
+    if (c) {
+      try {
+        const txt = decodeURIComponent(c.substring(9));
+        for (let i = 0; i < Math.min(txt.length, switchCount); i++) {
+          const v = parseInt(txt[i]);
+          if ([0,1,2].includes(v)) vals[i] = v;
+        }
+      } catch(e){ console.warn("Failed loading switches cookie", e); }
+    }
+    return vals;
+  }
+
+  function saveSwitches(vals) {
+    const str = vals.map(v => v.toString()).join('');
+    document.cookie = "switches=" + encodeURIComponent(str) + "; path=/; max-age=31536000";
+  }
+
+  let switchVals = loadSwitches();
+  for (let i = 0; i < switchCount; i++) {
+    const dot = document.createElement('div');
+    dot.style.width = '16px';
+    dot.style.height = '16px';
+    dot.style.borderRadius = '50%';
+    dot.style.background = switchVals[i] === 1 ? 'green' : switchVals[i] === 2 ? 'red' : '#555';
+    dot.title = `Switch ${i+1}`;
+    switchTable.appendChild(dot);
+    switches.push(dot);
+  }
+
+  window.updateSwitch = function(index, value) {
+    if (index < 0 || index >= switchCount) return;
+    switches[index].style.background = value === 1 ? 'green' : value === 2 ? 'red' : '#555';
+    switchVals[index] = value;
+    saveSwitches(switchVals);
+  }
+
+  window.processSwitchCommand = function(cmd, addr) {
+    const index = addr-1;
+    if (index < 0 || index >= switchCount) return;
+
+    if (cmd === 33) updateSwitch(index, 1); // left / green
+    if (cmd === 34) updateSwitch(index, 2); // right / red
+  }
+});
+</script>
 <section id="locoContainer" aria-label="Loco table" style="margin-top:12px; max-height:480px; overflow:auto; border:1px solid #333; background:#0f0f0f; padding:8px; border-radius:6px;">
   <h3 style="margin:4px 0;">Loco Table</h3>
   <table id="locoTable" style="width:100%; border-collapse:collapse; font-size:12px;">
@@ -527,5 +581,3 @@ window.addEventListener('beforeunload', async () => { if (port) await disconnect
 </script>
 </body>
 </html>
-
-
