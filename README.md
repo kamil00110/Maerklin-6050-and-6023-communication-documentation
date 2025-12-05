@@ -62,7 +62,7 @@ Sending to a loco that is selected in a control 80f can crash the system.
 - Set loco Speed: `X Y` <-- X stands for speed `1-14`, Y stands for address `1-80`
   - exampe loco 23 speed 12: `12 23`
 
-- Set loco Speed and Function: `X Y` <-- X stands for speed(`0-14`)+function (`+16=on +0=off`), Y stands for address `1-80`   can only be done this way.
+- Set loco Speed and Function: `X Y` <-- X stands for speed(`0-14`)+function (`+16=on +0=off`), Y stands for address `1-80`   can only be done this way. Addresses `1-127` shoul be supported by the 6027/6028/6030 hardware
   - exampe loco 31 speed 3 funktion 1: speed(3)+16: `20 31`
 
 - Read s88 unit: `X` <-- X stands for `192+address(1-31(officially))` 1 unit has 16 contacts. according to märklin 60128 software 63(unofficially)
@@ -167,14 +167,14 @@ The 6023 can be comanded to wait for and report if a specific contact is pressed
 - 6021: supports `F1-4`
 - 6022: dosnt support `F1-4`, only Train addresses `10`,`20`,`30`,`40`
 - 6023/6223: dosnt support `F1-4`, only Train addresses `10`,`20`,`30`,`40`, has an integraded Serial Interface, only supports `4` s88 modules
-- 6027: dcc support, supports `F1-4`, frezzes when to much data is sent
-- 6028: dcc support, supports `F1-4`, frezzes when to much data is sent //untested but should be the same as `6027`
-- 6030: dcc support; higher voltage for gauage 1 trains, supports `F1-4`, frezzes when to much data is sent //untested but should be the same as `6027`
+- 6027: dcc support, supports `F1-4`, frezzes when to much data is sent, Addresses 1-127 should be supported by the hardware
+- 6028: dcc support, supports `F1-4`, frezzes when to much data is sent, Addresses 1-127 should be supported by the hardware //untested but should be the same as `6027`
+- 6030: dcc support; higher voltage for gauage 1 trains, supports `F1-4`, frezzes when to much data is sent Addresses 1-127 should be supported by the hardware //untested but should be the same as `6027`
 
 ## Aditional info 
 Things that dont work: When a Control 80/80f or control unit has a loco address selected 
 then it will be inpossible to controll the loco with a 6050 interface. It may even crash to 6027.
-
+Addresses over `80` `(81-127)` are suported on the `6027/6028/6080` but are limited to `99` (control 80f) but can be send vith the 6050/6051 interface
 The interface modules are able to switch the Led on the 6040 Keyboard but they
 can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control Units externaly.
 
