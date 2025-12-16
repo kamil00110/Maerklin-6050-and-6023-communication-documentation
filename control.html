@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Windows-Style Draggable Iframes</title>
+<title>Windows-Style Draggable Iframes Without Reload</title>
 <style>
   body {
     margin: 0;
@@ -76,8 +76,7 @@
 const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
 
-const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + 10px margin
-let order = []; // keep track of iframe order
+const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + margin
 
 function createUnit() {
   const container = document.createElement('div');
@@ -94,16 +93,14 @@ function createUnit() {
   container.appendChild(handle);
   container.appendChild(iframe);
   taskbar.appendChild(container);
-  order.push(container);
 
   let isDragging = false;
   let startX = 0;
-  let startIndex = order.indexOf(container);
+  let currentTranslate = 0;
 
   handle.addEventListener('pointerdown', (e) => {
     isDragging = true;
     startX = e.clientX;
-    startIndex = order.indexOf(container);
     container.style.zIndex = 1000;
     handle.setPointerCapture(e.pointerId);
   });
@@ -111,27 +108,18 @@ function createUnit() {
   handle.addEventListener('pointermove', (e) => {
     if (!isDragging) return;
     const dx = e.clientX - startX;
+    currentTranslate = dx;
     container.style.transform = `translateX(${dx}px)`;
 
-    // Calculate potential new index
-    let newIndex = startIndex;
-    for (let i = 0; i < order.length; i++) {
-      if (order[i] === container) continue;
-      const other = order[i];
-      const rect = other.getBoundingClientRect();
-      const center = rect.left + rect.width / 2;
-      const draggedCenter = container.getBoundingClientRect().left + container.offsetWidth / 2;
-      if (draggedCenter > center) newIndex = i;
-    }
-
-    // Shift others
-    order.forEach((c, i) => {
+    // Optional: push other containers visually
+    Array.from(taskbar.children).forEach(c => {
       if (c === container) return;
-      let offset = 0;
-      if (i >= Math.min(startIndex, newIndex) && i <= Math.max(startIndex, newIndex)) {
-        offset = startIndex < newIndex ? -SLOT_WIDTH : SLOT_WIDTH;
+      const distance = container.offsetLeft + dx - c.offsetLeft;
+      if (Math.abs(distance) < SLOT_WIDTH) {
+        c.style.transform = distance > 0 ? `translateX(${SLOT_WIDTH}px)` : `translateX(${-SLOT_WIDTH}px)`;
+      } else {
+        c.style.transform = 'translateX(0)';
       }
-      c.style.transform = `translateX(${offset}px)`;
     });
   });
 
@@ -139,25 +127,15 @@ function createUnit() {
     if (!isDragging) return;
     isDragging = false;
     container.style.zIndex = '';
-    container.style.transform = '';
+    // Snap to nearest slot visually
+    const slotIndex = Math.round((container.offsetLeft + currentTranslate) / SLOT_WIDTH);
+    container.style.transform = `translateX(${slotIndex * SLOT_WIDTH - container.offsetLeft}px)`;
 
-    // Compute final index
-    const draggedCenter = container.getBoundingClientRect().left + container.offsetWidth / 2;
-    let newIndex = 0;
-    for (let i = 0; i < order.length; i++) {
-      if (order[i] === container) continue;
-      const rect = order[i].getBoundingClientRect();
-      const center = rect.left + rect.width / 2;
-      if (draggedCenter > center) newIndex = i + 1;
-    }
-
-    // Move container in DOM and order array
-    taskbar.insertBefore(container, taskbar.children[newIndex]);
-    order.splice(order.indexOf(container), 1);
-    order.splice(newIndex, 0, container);
-
-    // Reset transforms
-    order.forEach(c => c.style.transform = '');
+    // Reset transforms of other containers
+    Array.from(taskbar.children).forEach(c => {
+      if (c === container) return;
+      c.style.transform = 'translateX(0)';
+    });
   });
 }
 
