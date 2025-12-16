@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taskbar Iframes</title>
+<title>Draggable Iframes Taskbar</title>
 <style>
   body {
     margin: 0;
@@ -28,9 +28,10 @@
     background: #333;
     display: flex;
     align-items: flex-start;
-    overflow-x: auto;
+    overflow: hidden;
     padding: 5px;
     box-sizing: border-box;
+    user-select: none;
   }
 
   .unit-container {
@@ -63,14 +64,6 @@
     width: 100%;
     height: 100%;
   }
-
-  .drag-ghost {
-    position: absolute;
-    pointer-events: none;
-    opacity: 0.5;
-    z-index: 1000;
-    background: #666;
-  }
 </style>
 </head>
 <body>
@@ -81,11 +74,6 @@
 <script>
 const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
-
-let dragged = null;
-let ghost = null;
-let startX = 0;
-let startLeft = 0;
 
 function createUnit() {
   const container = document.createElement('div');
@@ -103,49 +91,37 @@ function createUnit() {
   container.appendChild(iframe);
   taskbar.appendChild(container);
 
+  let isDragging = false;
+  let startX = 0;
+  let startLeft = 0;
+
   handle.addEventListener('pointerdown', (e) => {
-    dragged = container;
+    isDragging = true;
     startX = e.clientX;
-    startLeft = container.offsetLeft;
-
-    // Create ghost (just a div, not an iframe)
-    ghost = document.createElement('div');
-    ghost.className = 'drag-ghost';
-    ghost.style.width = container.offsetWidth + 'px';
-    ghost.style.height = container.offsetHeight + 'px';
-    ghost.style.left = startLeft + 'px';
-    ghost.style.top = container.getBoundingClientRect().top + 'px';
-    document.body.appendChild(ghost);
-
-    e.preventDefault();
+    const style = window.getComputedStyle(container);
+    startLeft = parseInt(style.left || 0);
+    container.style.position = 'relative';
+    container.style.zIndex = 1000;
     handle.setPointerCapture(e.pointerId);
   });
 
   handle.addEventListener('pointermove', (e) => {
-    if (!ghost) return;
+    if (!isDragging) return;
     const dx = e.clientX - startX;
-    ghost.style.left = startLeft + dx + 'px';
+    let newLeft = startLeft + dx;
+
+    // Limit movement within taskbar bounds
+    const maxLeft = taskbar.clientWidth - container.offsetWidth - 5;
+    if (newLeft < 0) newLeft = 0;
+    if (newLeft > maxLeft) newLeft = maxLeft;
+
+    container.style.left = newLeft + 'px';
   });
 
   handle.addEventListener('pointerup', (e) => {
-    if (!ghost) return;
-
-    // Calculate new index in taskbar
-    const ghostCenter = ghost.getBoundingClientRect().left + ghost.offsetWidth / 2;
-    let newIndex = 0;
-    const containers = Array.from(taskbar.children).filter(c => c !== dragged);
-    for (let i = 0; i < containers.length; i++) {
-      const rect = containers[i].getBoundingClientRect();
-      if (ghostCenter > rect.left + rect.width / 2) newIndex = i + 1;
-    }
-
-    // Insert the real container at new index (no iframe reload)
-    taskbar.insertBefore(dragged, taskbar.children[newIndex]);
-
-    // Remove ghost
-    ghost.remove();
-    ghost = null;
-    dragged = null;
+    if (!isDragging) return;
+    isDragging = false;
+    container.style.zIndex = '';
   });
 }
 
