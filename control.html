@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>13cm Iframe Drag</title>
+<title>13cm Iframe Snap Grid</title>
 <style>
 body {
   font-family: sans-serif;
@@ -66,8 +66,11 @@ body {
 const grid = document.getElementById("grid");
 const addBtn = document.getElementById("addBtn");
 let zIndexCounter = 1;
+const GRID_SIZE_CM = 13; // iframe size
+const GRID_GAP_CM = 0.5; // gap
+const CM_TO_PX = 37.795; // approx conversion
 
-// create an iframe container with drag handle
+// create iframe container with drag handle
 function createIframe(x = 20, y = 20) {
   const wrapper = document.createElement("div");
   wrapper.className = "iframe-wrapper";
@@ -89,7 +92,7 @@ function createIframe(x = 20, y = 20) {
   makeDraggable(wrapper, handle);
 }
 
-// smooth pointer-based dragging
+// smooth dragging with snap on pointerup
 function makeDraggable(wrapper, handle) {
   let offsetX = 0;
   let offsetY = 0;
@@ -102,26 +105,37 @@ function makeDraggable(wrapper, handle) {
   });
 
   handle.addEventListener("pointermove", (e) => {
-    if (e.buttons !== 1) return; // only drag if pressed
+    if (e.buttons !== 1) return;
     wrapper.style.left = (e.clientX - offsetX) + "px";
     wrapper.style.top = (e.clientY - offsetY) + "px";
   });
 
   handle.addEventListener("pointerup", (e) => {
     handle.releasePointerCapture(e.pointerId);
+
+    // snap to grid
+    const gridPx = GRID_SIZE_CM * CM_TO_PX;
+    const gapPx = GRID_GAP_CM * CM_TO_PX;
+
+    const snapX = Math.round(wrapper.offsetLeft / (gridPx + gapPx)) * (gridPx + gapPx);
+    const snapY = Math.round(wrapper.offsetTop / (gridPx + gapPx)) * (gridPx + gapPx);
+
+    wrapper.style.left = snapX + "px";
+    wrapper.style.top = snapY + "px";
   });
 }
 
+// add new iframe
 addBtn.addEventListener("click", () => {
   createIframe(
-    20 + Math.random() * (window.innerWidth - 300),
-    20 + Math.random() * (window.innerHeight - 300)
+    20 + Math.random() * (window.innerWidth - 400),
+    20 + Math.random() * (window.innerHeight - 400)
   );
 });
 
-// initial layout: 3 iframes in a row
+// initial layout: 3 iframes
 for (let i = 0; i < 3; i++) {
-  createIframe(20 + i * (13*37.8 + 10), 20); // approximate row, 37.8px ≈ 1cm
+  createIframe(20 + i * (13.5*CM_TO_PX), 20);
 }
 </script>
 
