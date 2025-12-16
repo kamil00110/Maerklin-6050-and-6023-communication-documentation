@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <title>13cm Iframe Drag</title>
-
 <style>
 body {
   font-family: sans-serif;
@@ -28,34 +27,33 @@ body {
   border: 1px solid #ccc;
 }
 
+/* container holding drag handle + iframe */
 .iframe-wrapper {
   position: absolute;
-  width: 13cm;
-  height: 13cm;
-  border: 2px solid #888;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  user-select: none;
+  cursor: grab;
 }
 
 .drag-handle {
   height: 1cm;
   background: #ddd;
-  cursor: grab;
   text-align: center;
   line-height: 1cm;
   font-weight: bold;
+  user-select: none;
+  cursor: grab;
 }
 
-iframe {
-  flex: 1;
-  width: 100%;
-  border: none;
+/* the iframe itself */
+.iframe-wrapper iframe {
+  width: 13cm;
+  height: 13cm;
+  border: 2px solid #888;
+  display: block;
 }
 </style>
 </head>
-
 <body>
 
 <div id="toolbar">
@@ -69,6 +67,7 @@ const grid = document.getElementById("grid");
 const addBtn = document.getElementById("addBtn");
 let zIndexCounter = 1;
 
+// create an iframe container with drag handle
 function createIframe(x = 20, y = 20) {
   const wrapper = document.createElement("div");
   wrapper.className = "iframe-wrapper";
@@ -81,7 +80,7 @@ function createIframe(x = 20, y = 20) {
   handle.textContent = "⇅ Drag";
 
   const iframe = document.createElement("iframe");
-  iframe.src = "unit.html"; // your HTML
+  iframe.src = "unit.html"; // your iframe HTML
 
   wrapper.appendChild(handle);
   wrapper.appendChild(iframe);
@@ -90,7 +89,7 @@ function createIframe(x = 20, y = 20) {
   makeDraggable(wrapper, handle);
 }
 
-// Smooth dragging
+// smooth pointer-based dragging
 function makeDraggable(wrapper, handle) {
   let offsetX = 0;
   let offsetY = 0;
@@ -99,31 +98,30 @@ function makeDraggable(wrapper, handle) {
     offsetX = e.clientX - wrapper.offsetLeft;
     offsetY = e.clientY - wrapper.offsetTop;
     wrapper.style.zIndex = zIndexCounter++;
-    wrapper.setPointerCapture(e.pointerId);
+    handle.setPointerCapture(e.pointerId);
   });
 
   handle.addEventListener("pointermove", (e) => {
-    if (e.pressure === 0) return; // no drag if not pressed
+    if (e.buttons !== 1) return; // only drag if pressed
     wrapper.style.left = (e.clientX - offsetX) + "px";
     wrapper.style.top = (e.clientY - offsetY) + "px";
   });
 
   handle.addEventListener("pointerup", (e) => {
-    wrapper.releasePointerCapture(e.pointerId);
+    handle.releasePointerCapture(e.pointerId);
   });
 }
 
-// Add new iframe button
 addBtn.addEventListener("click", () => {
   createIframe(
-    20 + Math.random() * (window.innerWidth - 250),
-    20 + Math.random() * (window.innerHeight - 250)
+    20 + Math.random() * (window.innerWidth - 300),
+    20 + Math.random() * (window.innerHeight - 300)
   );
 });
 
-// Start with 3 iframes
+// initial layout: 3 iframes in a row
 for (let i = 0; i < 3; i++) {
-  createIframe(20 + i * 14 * 37.8, 20); // approximate row alignment
+  createIframe(20 + i * (13*37.8 + 10), 20); // approximate row, 37.8px ≈ 1cm
 }
 </script>
 
