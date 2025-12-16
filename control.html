@@ -17,49 +17,32 @@
   }
 </style>
 
-<script type="application/javascript">
-function resizeIFrameToFitContent(iFrame) {
-    if (!iFrame.contentWindow || !iFrame.contentWindow.document) return;
+<script type="text/javascript">
+  function iframeLoaded(iframe) {
+      if (!iframe || !iframe.contentWindow) return;
 
-    const body = iFrame.contentWindow.document.body;
-    const html = iFrame.contentWindow.document.documentElement;
+      // Reset first, then fit to content
+      iframe.style.height = "";
+      iframe.style.width = "";
 
-    iFrame.width = Math.max(
-        body.scrollWidth,
-        body.offsetWidth,
-        html.clientWidth,
-        html.scrollWidth,
-        html.offsetWidth
-    );
+      iframe.style.height =
+          iframe.contentWindow.document.body.scrollHeight + "px";
 
-    iFrame.height = Math.max(
-        body.scrollHeight,
-        body.offsetHeight,
-        html.clientHeight,
-        html.scrollHeight,
-        html.offsetHeight
-    );
-}
+      iframe.style.width =
+          iframe.contentWindow.document.body.scrollWidth + "px";
+  }
 
-// Resize ALL iframes
-function resizeAllIFrames() {
-    const iframes = document.querySelectorAll("iframe");
-    for (let i = 0; i < iframes.length; i++) {
-        resizeIFrameToFitContent(iframes[i]);
-    }
-}
+  window.addEventListener("DOMContentLoaded", () => {
+      const container = document.getElementById("container");
+      const iframeCount = 5;
 
-window.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById("container");
-    const iframeCount = 5;
-
-    for (let i = 0; i < iframeCount; i++) {
-        const iframe = document.createElement("iframe");
-        iframe.src = "unit.html"; // SAME ORIGIN REQUIRED
-        iframe.onload = () => resizeIFrameToFitContent(iframe);
-        container.appendChild(iframe);
-    }
-});
+      for (let i = 0; i < iframeCount; i++) {
+          const iframe = document.createElement("iframe");
+          iframe.src = "unit.html"; // SAME ORIGIN
+          iframe.onload = () => iframeLoaded(iframe);
+          container.appendChild(iframe);
+      }
+  });
 </script>
 </head>
 
@@ -68,4 +51,5 @@ window.addEventListener("DOMContentLoaded", () => {
 <div id="container"></div>
 </body>
 </html>
+
 
