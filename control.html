@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Iframe Grid</title>
+<title>Iframe Grid (cm units)</title>
 
 <style>
   body {
@@ -10,38 +10,48 @@
   }
 
   #toolbar {
-    margin-bottom: 10px;
+    margin-bottom: 1cm;
   }
 
   #addBtn {
-    font-size: 20px;
-    padding: 5px 12px;
+    font-size: 18px;
+    padding: 4px 10px;
     cursor: pointer;
   }
 
   #grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 0.5cm;
   }
 
   .iframe-wrapper {
-    width: 378px;
-    height: 378px;
-    border: 2px solid #999;
-    position: relative;
-    cursor: grab;
+    width: 10cm;
+    height: 10cm;
+    border: 2px solid #888;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
   }
 
-  .iframe-wrapper:active {
+  .drag-handle {
+    height: 0.8cm;
+    background: #ddd;
+    cursor: grab;
+    text-align: center;
+    line-height: 0.8cm;
+    user-select: none;
+    font-weight: bold;
+  }
+
+  .drag-handle:active {
     cursor: grabbing;
   }
 
   iframe {
-    width: 100%;
-    height: 100%;
+    flex: 1;
     border: none;
-    pointer-events: none; /* IMPORTANT: allows dragging */
+    width: 100%;
   }
 </style>
 </head>
@@ -58,61 +68,63 @@
 const grid = document.getElementById("grid");
 const addBtn = document.getElementById("addBtn");
 
+let dragged = null;
+
 function createIframe() {
   const wrapper = document.createElement("div");
   wrapper.className = "iframe-wrapper";
-  wrapper.draggable = true;
+
+  const handle = document.createElement("div");
+  handle.className = "drag-handle";
+  handle.textContent = "⇅ Drag";
 
   const iframe = document.createElement("iframe");
   iframe.src = "unit.html"; // same-origin
 
+  wrapper.appendChild(handle);
   wrapper.appendChild(iframe);
   grid.appendChild(wrapper);
 
-  setupDrag(wrapper);
+  setupDrag(handle, wrapper);
 }
 
-// Drag & drop reorder
-let dragged = null;
+function setupDrag(handle, wrapper) {
+  handle.draggable = true;
 
-function setupDrag(el) {
-  el.addEventListener("dragstart", () => {
-    dragged = el;
-    el.style.opacity = "0.5";
+  handle.addEventListener("dragstart", () => {
+    dragged = wrapper;
+    wrapper.style.opacity = "0.5";
   });
 
-  el.addEventListener("dragend", () => {
-    el.style.opacity = "1";
+  handle.addEventListener("dragend", () => {
+    wrapper.style.opacity = "1";
     dragged = null;
   });
 
-  el.addEventListener("dragover", (e) => {
+  wrapper.addEventListener("dragover", (e) => {
     e.preventDefault();
   });
 
-  el.addEventListener("drop", () => {
-    if (dragged && dragged !== el) {
-      const nodes = [...grid.children];
-      const draggedIndex = nodes.indexOf(dragged);
-      const targetIndex = nodes.indexOf(el);
+  wrapper.addEventListener("drop", () => {
+    if (!dragged || dragged === wrapper) return;
 
-      if (draggedIndex < targetIndex) {
-        grid.insertBefore(dragged, el.nextSibling);
-      } else {
-        grid.insertBefore(dragged, el);
-      }
+    const children = [...grid.children];
+    const draggedIndex = children.indexOf(dragged);
+    const targetIndex = children.indexOf(wrapper);
+
+    if (draggedIndex < targetIndex) {
+      grid.insertBefore(dragged, wrapper.nextSibling);
+    } else {
+      grid.insertBefore(dragged, wrapper);
     }
   });
 }
 
 addBtn.addEventListener("click", createIframe);
 
-// Start with a few
-for (let i = 0; i < 3; i++) {
-  createIframe();
-}
+// Start with some
+for (let i = 0; i < 3; i++) createIframe();
 </script>
 
 </body>
 </html>
-
