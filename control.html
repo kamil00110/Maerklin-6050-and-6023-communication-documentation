@@ -24,7 +24,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 13cm; /* Taskbar height equals iframe height */
+    height: 13cm;
     background: #333;
     display: flex;
     align-items: flex-start;
@@ -42,6 +42,7 @@
     flex-direction: column;
     background: #222;
     border: 1px solid #555;
+    flex-shrink: 0;
   }
 
   .drag-handle {
@@ -62,6 +63,13 @@
     width: 100%;
     height: 100%;
   }
+
+  .drag-ghost {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.7;
+    z-index: 1000;
+  }
 </style>
 </head>
 <body>
@@ -74,6 +82,7 @@ const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
 
 let dragged = null;
+let ghost = null;
 let startX = 0;
 let startLeft = 0;
 
@@ -93,34 +102,45 @@ function createUnit() {
   container.appendChild(iframe);
   taskbar.appendChild(container);
 
-  // Drag logic
   handle.addEventListener('pointerdown', (e) => {
     dragged = container;
     startX = e.clientX;
-    startLeft = container.offsetLeft;
+    startLeft = container.getBoundingClientRect().left;
+
+    // Create ghost for dragging
+    ghost = container.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.width = container.offsetWidth + 'px';
+    ghost.style.height = container.offsetHeight + 'px';
+    ghost.style.left = startLeft + 'px';
+    ghost.style.top = container.getBoundingClientRect().top + 'px';
+    document.body.appendChild(ghost);
+    e.preventDefault();
     handle.setPointerCapture(e.pointerId);
   });
 
   handle.addEventListener('pointermove', (e) => {
-    if (dragged) {
-      e.preventDefault();
-      const dx = e.clientX - startX;
-      dragged.style.position = 'absolute';
-      dragged.style.left = startLeft + dx + 'px';
-      dragged.style.top = taskbar.getBoundingClientRect().top + 'px';
-      dragged.style.zIndex = 1000;
-    }
+    if (!ghost) return;
+    const dx = e.clientX - startX;
+    ghost.style.left = startLeft + dx + 'px';
   });
 
   handle.addEventListener('pointerup', (e) => {
-    if (dragged) {
-      // Snap back to taskbar flex layout
-      dragged.style.position = 'static';
-      dragged.style.left = '';
-      dragged.style.top = '';
-      dragged.style.zIndex = '';
-      dragged = null;
+    if (!ghost) return;
+    // Determine new index based on ghost center
+    const ghostCenter = ghost.getBoundingClientRect().left + ghost.offsetWidth / 2;
+    let newIndex = 0;
+    const containers = Array.from(taskbar.children).filter(c => c !== dragged);
+    for (let i = 0; i < containers.length; i++) {
+      const rect = containers[i].getBoundingClientRect();
+      if (ghostCenter > rect.left + rect.width / 2) newIndex = i + 1;
     }
+    taskbar.insertBefore(dragged, taskbar.children[newIndex]);
+    
+    // Remove ghost
+    ghost.remove();
+    ghost = null;
+    dragged = null;
   });
 }
 
