@@ -3,68 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Windows-Style Draggable Iframes</title>
+<title>Windows-Style Taskbar Draggable Iframes</title>
 <style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    background: #f0f0f0;
-  }
-
-  #addUnit {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    padding: 8px 12px;
-    font-size: 16px;
-  }
-
-  #taskbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 13cm;
-    background: #333;
-    display: flex;
-    align-items: flex-start;
-    overflow: hidden;
-    padding: 5px;
-    box-sizing: border-box;
-    user-select: none;
-  }
-
-  .unit-container {
-    position: relative;
-    width: 13cm;
-    height: 13cm;
-    margin: 0 5px;
-    display: flex;
-    flex-direction: column;
-    background: #222;
-    border: 1px solid #555;
-    flex-shrink: 0;
-    transition: transform 0.2s;
-  }
-
-  .drag-handle {
-    height: 20px;
-    background: #555;
-    cursor: grab;
-    color: white;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-  }
-
-  .unit-frame {
-    flex: 1;
-    border: none;
-    width: 100%;
-    height: 100%;
-  }
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f0f0f0;
+}
+#addUnit {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  padding: 8px 12px;
+  font-size: 16px;
+}
+#taskbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 13cm;
+  background: #333;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
+  padding: 5px;
+  box-sizing: border-box;
+  user-select: none;
+}
+.unit-container {
+  position: relative;
+  width: 13cm;
+  height: 13cm;
+  margin: 0 5px;
+  display: flex;
+  flex-direction: column;
+  background: #222;
+  border: 1px solid #555;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.drag-handle {
+  height: 20px;
+  background: #555;
+  cursor: grab;
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.unit-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+  height: 100%;
+}
 </style>
 </head>
 <body>
@@ -76,8 +71,8 @@
 const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
 
-const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm in pixels + margin
-let units = [];
+const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + margin
+let units = []; // array of objects {el: container, slot: index}
 
 function createUnit() {
   const container = document.createElement('div');
@@ -94,55 +89,68 @@ function createUnit() {
   container.appendChild(handle);
   container.appendChild(iframe);
   taskbar.appendChild(container);
-  units.push(container);
+
+  const unit = { el: container, slot: units.length };
+  units.push(unit);
 
   let isDragging = false;
   let startX = 0;
-  let startTranslate = 0;
+  let originalSlot = unit.slot;
 
-  handle.addEventListener('pointerdown', (e) => {
+  handle.addEventListener('pointerdown', e => {
     isDragging = true;
     startX = e.clientX;
-    const transform = getComputedStyle(container).transform;
-    startTranslate = transform !== 'none' ? parseFloat(transform.split(',')[4]) : 0;
+    originalSlot = unit.slot;
     container.style.zIndex = 1000;
     handle.setPointerCapture(e.pointerId);
   });
 
-  handle.addEventListener('pointermove', (e) => {
+  handle.addEventListener('pointermove', e => {
     if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const translateX = startTranslate + dx;
-    container.style.transform = `translateX(${translateX}px)`;
 
-    // Real-time push other units
-    const draggedCenter = container.offsetLeft + translateX + container.offsetWidth / 2;
+    const dx = e.clientX - startX;
+    container.style.transform = `translateX(${dx}px)`;
+
+    // Compute tentative slot
+    const centerX = container.offsetLeft + dx + container.offsetWidth / 2;
+    let newSlot = Math.round(centerX / SLOT_WIDTH);
+    if (newSlot < 0) newSlot = 0;
+    if (newSlot >= units.length) newSlot = units.length - 1;
+
+    // Move other units temporarily
     units.forEach(u => {
-      if (u === container) return;
-      const center = u.offsetLeft + u.offsetWidth / 2;
-      const distance = draggedCenter - center;
-      if (distance > 0 && distance < SLOT_WIDTH) {
-        u.style.transform = `translateX(${SLOT_WIDTH}px)`;
-      } else if (distance < 0 && distance > -SLOT_WIDTH) {
-        u.style.transform = `translateX(${-SLOT_WIDTH}px)`;
-      } else {
-        u.style.transform = 'translateX(0)';
-      }
+      if (u === unit) return;
+      let shift = 0;
+      if (originalSlot < newSlot && u.slot > originalSlot && u.slot <= newSlot) shift = -SLOT_WIDTH;
+      if (originalSlot > newSlot && u.slot >= newSlot && u.slot < originalSlot) shift = SLOT_WIDTH;
+      u.el.style.transform = `translateX(${shift}px)`;
     });
   });
 
-  handle.addEventListener('pointerup', (e) => {
+  handle.addEventListener('pointerup', e => {
     if (!isDragging) return;
     isDragging = false;
     container.style.zIndex = '';
 
-    // Snap to nearest slot
-    const translate = parseFloat(container.style.transform.replace('translateX(', '').replace('px)', '')) || 0;
-    const slotIndex = Math.round((container.offsetLeft + translate) / SLOT_WIDTH);
-    container.style.transform = `translateX(${slotIndex * SLOT_WIDTH - container.offsetLeft}px)`;
+    const dx = parseFloat(container.style.transform.replace('translateX(', '').replace('px)', '')) || 0;
+    const centerX = container.offsetLeft + dx + container.offsetWidth / 2;
+    let finalSlot = Math.round(centerX / SLOT_WIDTH);
+    if (finalSlot < 0) finalSlot = 0;
+    if (finalSlot >= units.length) finalSlot = units.length - 1;
 
-    // Reset others
-    units.forEach(u => { if (u !== container) u.style.transform = 'translateX(0)'; });
+    // Update unit slots
+    const oldSlot = unit.slot;
+    unit.slot = finalSlot;
+    units.forEach(u => {
+      if (u === unit) return;
+      if (oldSlot < finalSlot && u.slot > oldSlot && u.slot <= finalSlot) u.slot -= 1;
+      if (oldSlot > finalSlot && u.slot >= finalSlot && u.slot < oldSlot) u.slot += 1;
+    });
+
+    // Reset transforms and apply final positions
+    units.forEach(u => {
+      u.el.style.transform = `translateX(${u.slot * SLOT_WIDTH - u.el.offsetLeft}px)`;
+    });
   });
 }
 
