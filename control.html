@@ -2,57 +2,57 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>12cm Iframe Grid</title>
+<title>13cm Iframe Drag</title>
 
 <style>
-  body {
-    font-family: sans-serif;
-  }
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 1cm;
+}
 
-  #toolbar {
-    margin-bottom: 1cm;
-  }
+#toolbar {
+  margin-bottom: 1cm;
+}
 
-  #addBtn {
-    font-size: 18px;
-    padding: 4px 10px;
-    cursor: pointer;
-  }
+#addBtn {
+  font-size: 18px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
 
-  #grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, 12cm);
-    gap: 0.5cm;
-  }
+#grid {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  border: 1px solid #ccc;
+}
 
-  .iframe-wrapper {
-    width: 12cm;
-    height: 12cm;
-    border: 2px solid #888;
-    background: white;
-    display: flex;
-    flex-direction: column;
-    user-select: none;
-  }
+.iframe-wrapper {
+  position: absolute;
+  width: 13cm;
+  height: 13cm;
+  border: 2px solid #888;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  user-select: none;
+}
 
-  .drag-handle {
-    height: 0.8cm;
-    background: #ddd;
-    cursor: grab;
-    text-align: center;
-    line-height: 0.8cm;
-    font-weight: bold;
-  }
+.drag-handle {
+  height: 1cm;
+  background: #ddd;
+  cursor: grab;
+  text-align: center;
+  line-height: 1cm;
+  font-weight: bold;
+}
 
-  iframe {
-    flex: 1;
-    width: 100%;
-    border: none;
-  }
-
-  .dragging {
-    opacity: 0.6;
-  }
+iframe {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
 </style>
 </head>
 
@@ -67,20 +67,21 @@
 <script>
 const grid = document.getElementById("grid");
 const addBtn = document.getElementById("addBtn");
+let zIndexCounter = 1;
 
-let dragItem = null;
-
-function createIframe(order) {
+function createIframe(x = 20, y = 20) {
   const wrapper = document.createElement("div");
   wrapper.className = "iframe-wrapper";
-  wrapper.style.order = order;
+  wrapper.style.left = x + "px";
+  wrapper.style.top = y + "px";
+  wrapper.style.zIndex = zIndexCounter++;
 
   const handle = document.createElement("div");
   handle.className = "drag-handle";
   handle.textContent = "⇅ Drag";
 
   const iframe = document.createElement("iframe");
-  iframe.src = "unit.html"; // Your HTML file
+  iframe.src = "unit.html"; // your HTML
 
   wrapper.appendChild(handle);
   wrapper.appendChild(iframe);
@@ -89,42 +90,41 @@ function createIframe(order) {
   makeDraggable(wrapper, handle);
 }
 
+// Smooth dragging
 function makeDraggable(wrapper, handle) {
+  let offsetX = 0;
+  let offsetY = 0;
+
   handle.addEventListener("pointerdown", (e) => {
-    dragItem = wrapper;
-    wrapper.classList.add("dragging");
-    handle.setPointerCapture(e.pointerId);
+    offsetX = e.clientX - wrapper.offsetLeft;
+    offsetY = e.clientY - wrapper.offsetTop;
+    wrapper.style.zIndex = zIndexCounter++;
+    wrapper.setPointerCapture(e.pointerId);
   });
 
   handle.addEventListener("pointermove", (e) => {
-    if (!dragItem) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const target = el?.closest(".iframe-wrapper");
-    if (target && target !== dragItem && target.parentNode === grid) {
-      const items = [...grid.children];
-      const draggedIndex = items.indexOf(dragItem);
-      const targetIndex = items.indexOf(target);
-      if (draggedIndex < targetIndex) {
-        grid.insertBefore(dragItem, target.nextSibling);
-      } else {
-        grid.insertBefore(dragItem, target);
-      }
-    }
+    if (e.pressure === 0) return; // no drag if not pressed
+    wrapper.style.left = (e.clientX - offsetX) + "px";
+    wrapper.style.top = (e.clientY - offsetY) + "px";
   });
 
   handle.addEventListener("pointerup", (e) => {
-    dragItem?.classList.remove("dragging");
-    dragItem = null;
-    handle.releasePointerCapture(e.pointerId);
+    wrapper.releasePointerCapture(e.pointerId);
   });
 }
 
+// Add new iframe button
 addBtn.addEventListener("click", () => {
-  createIframe(grid.children.length);
+  createIframe(
+    20 + Math.random() * (window.innerWidth - 250),
+    20 + Math.random() * (window.innerHeight - 250)
+  );
 });
 
 // Start with 3 iframes
-for (let i = 0; i < 3; i++) createIframe(i);
+for (let i = 0; i < 3; i++) {
+  createIframe(20 + i * 14 * 37.8, 20); // approximate row alignment
+}
 </script>
 
 </body>
