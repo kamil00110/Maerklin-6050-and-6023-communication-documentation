@@ -1,167 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>13cm Iframe Smart Drag</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taskbar Iframes</title>
 <style>
-body {
-  font-family: sans-serif;
-  margin: 0;
-  padding: 1cm;
-}
-
-#toolbar {
-  margin-bottom: 1cm;
-}
-
-#addBtn {
-  font-size: 18px;
-  padding: 4px 10px;
-  cursor: pointer;
-}
-
-#grid {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
-  border: 1px solid #ccc;
-}
-
-.iframe-wrapper {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  cursor: grab;
-  transition: left 0.2s, top 0.2s;
-}
-
-.drag-handle {
-  height: 1cm;
-  background: #ddd;
-  text-align: center;
-  line-height: 1cm;
-  font-weight: bold;
-  user-select: none;
-  cursor: grab;
-}
-
-.iframe-wrapper iframe {
-  width: 13cm;
-  height: 13cm;
-  border: 2px solid #888;
-  display: block;
-}
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #f0f0f0;
+  }
+  #taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: #333;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+  .unit-frame {
+    width: 300px;
+    height: 140px;
+    margin: 0 5px;
+    border: none;
+    cursor: grab;
+  }
+  button {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    font-size: 16px;
+  }
 </style>
 </head>
 <body>
 
-<div id="toolbar">
-  <button id="addBtn">＋ Add</button>
-</div>
-
-<div id="grid"></div>
+<button id="addUnit">Add Unit</button>
+<div id="taskbar"></div>
 
 <script>
-const grid = document.getElementById("grid");
-const addBtn = document.getElementById("addBtn");
-let zIndexCounter = 1;
-const CM_TO_PX = 37.795;
-const SIZE_CM = 13;
-const SIZE_PX = SIZE_CM * CM_TO_PX;
-const GAP_CM = 0.5;
-const GAP_PX = GAP_CM * CM_TO_PX;
+const taskbar = document.getElementById('taskbar');
+const addBtn = document.getElementById('addUnit');
 
-// create iframe container
-function createIframe(x = 20, y = 20) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "iframe-wrapper";
-  wrapper.style.left = x + "px";
-  wrapper.style.top = y + "px";
-  wrapper.style.zIndex = zIndexCounter++;
+let dragged = null;
+let offsetX = 0;
 
-  const handle = document.createElement("div");
-  handle.className = "drag-handle";
-  handle.textContent = "⇅ Drag";
-
-  const iframe = document.createElement("iframe");
-  iframe.src = "unit.html"; // your iframe
-
-  wrapper.appendChild(handle);
-  wrapper.appendChild(iframe);
-  grid.appendChild(wrapper);
-
-  makeDraggable(wrapper, handle);
-}
-
-// check overlap and push away
-function avoidOverlap(moving) {
-  const all = Array.from(grid.children).filter(c => c !== moving);
-  all.forEach(other => {
-    const mx = moving.offsetLeft;
-    const my = moving.offsetTop;
-    const ox = other.offsetLeft;
-    const oy = other.offsetTop;
-
-    if (mx < ox + SIZE_PX + GAP_PX &&
-        mx + SIZE_PX + GAP_PX > ox &&
-        my < oy + SIZE_PX + GAP_PX &&
-        my + SIZE_PX + GAP_PX > oy) {
-      // push other down/right
-      const pushX = (mx + SIZE_PX + GAP_PX) - ox;
-      const pushY = (my + SIZE_PX + GAP_PX) - oy;
-      other.style.left = (ox + pushX) + "px";
-      other.style.top = (oy + pushY) + "px";
-      // recursively avoid
-      avoidOverlap(other);
+function createUnit() {
+  const iframe = document.createElement('iframe');
+  iframe.src = 'unit.html';
+  iframe.className = 'unit-frame';
+  
+  // Enable dragging
+  iframe.addEventListener('pointerdown', (e) => {
+    dragged = iframe;
+    offsetX = e.clientX - iframe.getBoundingClientRect().left;
+    iframe.setPointerCapture(e.pointerId);
+  });
+  
+  iframe.addEventListener('pointermove', (e) => {
+    if (dragged) {
+      e.preventDefault();
+      const newX = e.clientX - offsetX - taskbar.getBoundingClientRect().left;
+      dragged.style.position = 'absolute';
+      dragged.style.left = newX + 'px';
+      dragged.style.top = taskbar.getBoundingClientRect().top + 'px';
+      dragged.style.zIndex = 1000;
     }
   });
+  
+  iframe.addEventListener('pointerup', (e) => {
+    if (dragged) {
+      // Snap back to taskbar layout
+      dragged.style.position = 'static';
+      dragged.style.zIndex = '';
+      dragged = null;
+    }
+  });
+  
+  taskbar.appendChild(iframe);
 }
 
-// smooth dragging
-function makeDraggable(wrapper, handle) {
-  let offsetX = 0;
-  let offsetY = 0;
+addBtn.addEventListener('click', createUnit);
 
-  handle.addEventListener("pointerdown", e => {
-    offsetX = e.clientX - wrapper.offsetLeft;
-    offsetY = e.clientY - wrapper.offsetTop;
-    wrapper.style.zIndex = zIndexCounter++;
-    handle.setPointerCapture(e.pointerId);
-  });
-
-  handle.addEventListener("pointermove", e => {
-    if (e.buttons !== 1) return;
-    wrapper.style.left = (e.clientX - offsetX) + "px";
-    wrapper.style.top = (e.clientY - offsetY) + "px";
-  });
-
-  handle.addEventListener("pointerup", e => {
-    handle.releasePointerCapture(e.pointerId);
-
-    // snap to nearest grid
-    const snapX = Math.round(wrapper.offsetLeft / (SIZE_PX + GAP_PX)) * (SIZE_PX + GAP_PX);
-    const snapY = Math.round(wrapper.offsetTop / (SIZE_PX + GAP_PX)) * (SIZE_PX + GAP_PX);
-    wrapper.style.left = snapX + "px";
-    wrapper.style.top = snapY + "px";
-
-    avoidOverlap(wrapper); // push others if needed
-  });
-}
-
-addBtn.addEventListener("click", () => {
-  createIframe(
-    Math.random() * (window.innerWidth - SIZE_PX),
-    Math.random() * (window.innerHeight - SIZE_PX)
-  );
-});
-
-// spawn 3 random iframes
-for (let i = 0; i < 3; i++) {
-  createIframe(
-    Math.random() * (window.innerWidth - SIZE_PX),
-    Math.random() * (window.innerHeight - SIZE_PX)
-  );
-}
+// Initial unit
+createUnit();
 </script>
 
 </body>
