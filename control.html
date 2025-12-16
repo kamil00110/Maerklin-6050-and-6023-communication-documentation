@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Iframe Drag Grid (Correct)</title>
+<title>Iframe Grid Drag</title>
 
 <style>
   body {
@@ -20,33 +20,38 @@
   }
 
   #grid {
-    position: relative;
-    width: 100%;
-    min-height: 100vh;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 10cm);
+    gap: 0.5cm;
   }
 
   .iframe-wrapper {
-    position: absolute;
     width: 10cm;
     height: 10cm;
     border: 2px solid #888;
-    background: #fff;
+    background: white;
+    display: flex;
+    flex-direction: column;
   }
 
   .drag-handle {
     height: 0.8cm;
     background: #ddd;
     cursor: grab;
+    user-select: none;
     text-align: center;
     line-height: 0.8cm;
-    user-select: none;
     font-weight: bold;
   }
 
+  .dragging {
+    opacity: 0.6;
+  }
+
   iframe {
-    width: 100%;
-    height: calc(100% - 0.8cm);
+    flex: 1;
     border: none;
+    width: 100%;
   }
 </style>
 </head>
@@ -63,14 +68,11 @@
 const grid = document.getElementById("grid");
 const addBtn = document.getElementById("addBtn");
 
-let zIndex = 1;
+let dragged = null;
 
-function createIframe(x = 20, y = 20) {
+function createIframe() {
   const wrapper = document.createElement("div");
   wrapper.className = "iframe-wrapper";
-  wrapper.style.left = x + "px";
-  wrapper.style.top = y + "px";
-  wrapper.style.zIndex = zIndex++;
 
   const handle = document.createElement("div");
   handle.className = "drag-handle";
@@ -86,33 +88,47 @@ function createIframe(x = 20, y = 20) {
   makeDraggable(wrapper, handle);
 }
 
-function makeDraggable(wrapper, handle) {
-  let offsetX, offsetY;
+function makeDraggable(item, handle) {
+  let startX, startY;
 
   handle.addEventListener("pointerdown", (e) => {
-    offsetX = e.clientX - wrapper.offsetLeft;
-    offsetY = e.clientY - wrapper.offsetTop;
-    wrapper.setPointerCapture(e.pointerId);
-    wrapper.style.zIndex = zIndex++;
+    dragged = item;
+    item.classList.add("dragging");
+    startX = e.clientX;
+    startY = e.clientY;
+    handle.setPointerCapture(e.pointerId);
   });
 
   handle.addEventListener("pointermove", (e) => {
-    if (e.buttons !== 1) return;
-    wrapper.style.left = (e.clientX - offsetX) + "px";
-    wrapper.style.top = (e.clientY - offsetY) + "px";
+    if (!dragged) return;
+
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const target = el?.closest(".iframe-wrapper");
+
+    if (target && target !== dragged && target.parentNode === grid) {
+      const items = [...grid.children];
+      const draggedIndex = items.indexOf(dragged);
+      const targetIndex = items.indexOf(target);
+
+      if (draggedIndex < targetIndex) {
+        grid.insertBefore(dragged, target.nextSibling);
+      } else {
+        grid.insertBefore(dragged, target);
+      }
+    }
   });
 
   handle.addEventListener("pointerup", (e) => {
-    wrapper.releasePointerCapture(e.pointerId);
+    dragged?.classList.remove("dragging");
+    dragged = null;
+    handle.releasePointerCapture(e.pointerId);
   });
 }
 
-addBtn.addEventListener("click", () => {
-  createIframe(40 + Math.random() * 200, 40 + Math.random() * 200);
-});
+addBtn.addEventListener("click", createIframe);
 
-// Start with one
-createIframe();
+// Start with a few
+for (let i = 0; i < 3; i++) createIframe();
 </script>
 
 </body>
