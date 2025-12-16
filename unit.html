@@ -1025,14 +1025,28 @@
                           if (buffer.length < 2) {
                             buffer.push(nr);
                           } else {
+						    let addrBuffer = loadAddressData(buffer[0]+buffer[1]);
+							addrBuffer.used = false;
+							saveAddressData(buffer[0]+buffer[1], addrBuffer); 
                             buffer = [nr];
                           }
                         
                           numDiv1.textContent = buffer[0] ?? '';
                           numDiv2.textContent = buffer[1] ?? '';
-                        
+                          let addrBuffer = loadAddressData(buffer[0]+buffer[1]);
                           if (buffer.length === 2) {
-                            onTwoNumbersFilled(buffer[0], buffer[1]);
+						    if(addrBuffer.used==false){
+							  console.log(buffer[0]+buffer[1]+" is avivable")
+                              onTwoNumbersFilled(buffer[0], buffer[1]);
+							  addrBuffer.used = true;
+							  saveAddressData(buffer[0]+buffer[1], addrBuffer); 
+							}
+							else{
+							  console.log(buffer[0]+buffer[1]+" is in use")
+							  buffer = [];
+							  numDiv1.textContent = "";
+                              numDiv2.textContent = "";
+							}
                           }
                         }
                         function bothNumbersSet() {
@@ -1250,7 +1264,8 @@
                         f1: false,
                         f2: false,
                         f3: false,
-                        f4: false
+                        f4: false,
+						used: false,
                     };
                 
                     // write cookie
