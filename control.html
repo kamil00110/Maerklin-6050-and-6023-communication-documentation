@@ -3,14 +3,68 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Taskbar Snap Iframes</title>
+<title>Windows-Style Draggable Iframes</title>
 <style>
-  body { margin:0; font-family:sans-serif; background:#f0f0f0; }
-  #addUnit { position: fixed; top: 10px; left:10px; padding:8px 12px; font-size:16px; }
-  #taskbar { position: fixed; bottom:0; left:0; right:0; height:13cm; background:#333; display:flex; align-items:flex-start; padding:5px; box-sizing:border-box; user-select:none; }
-  .unit-container { position: relative; width:13cm; height:13cm; margin:0 5px; display:flex; flex-direction:column; background:#222; border:1px solid #555; flex-shrink:0; transition: left 0.2s; }
-  .drag-handle { height:20px; background:#555; cursor:grab; color:white; font-size:12px; display:flex; align-items:center; justify-content:center; user-select:none; }
-  .unit-frame { flex:1; border:none; width:100%; height:100%; }
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #f0f0f0;
+  }
+
+  #addUnit {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    padding: 8px 12px;
+    font-size: 16px;
+  }
+
+  #taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 13cm;
+    background: #333;
+    display: flex;
+    align-items: flex-start;
+    overflow: hidden;
+    padding: 5px;
+    box-sizing: border-box;
+    user-select: none;
+  }
+
+  .unit-container {
+    position: relative;
+    width: 13cm;
+    height: 13cm;
+    margin: 0 5px;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border: 1px solid #555;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .drag-handle {
+    height: 20px;
+    background: #555;
+    cursor: grab;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .unit-frame {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
+  }
 </style>
 </head>
 <body>
@@ -22,8 +76,8 @@
 const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
 
-const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + margin in pixels
-let slots = []; // Array of slot positions (logical order)
+const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + 10px margin
+let order = []; // keep track of iframe order
 
 function createUnit() {
   const container = document.createElement('div');
@@ -40,22 +94,16 @@ function createUnit() {
   container.appendChild(handle);
   container.appendChild(iframe);
   taskbar.appendChild(container);
-
-  // Assign initial slot
-  slots.push(container);
-  updatePositions();
+  order.push(container);
 
   let isDragging = false;
   let startX = 0;
-  let startLeft = 0;
-  let originalIndex = slots.indexOf(container);
+  let startIndex = order.indexOf(container);
 
   handle.addEventListener('pointerdown', (e) => {
     isDragging = true;
     startX = e.clientX;
-    startLeft = container.offsetLeft;
-    originalIndex = slots.indexOf(container);
-    container.style.position = 'relative';
+    startIndex = order.indexOf(container);
     container.style.zIndex = 1000;
     handle.setPointerCapture(e.pointerId);
   });
@@ -63,21 +111,27 @@ function createUnit() {
   handle.addEventListener('pointermove', (e) => {
     if (!isDragging) return;
     const dx = e.clientX - startX;
-    container.style.left = startLeft + dx + 'px';
+    container.style.transform = `translateX(${dx}px)`;
 
-    // Determine the potential slot
-    const center = container.offsetLeft + SLOT_WIDTH/2;
-    let newIndex = Math.floor(center / SLOT_WIDTH);
-    if (newIndex < 0) newIndex = 0;
-    if (newIndex >= slots.length) newIndex = slots.length - 1;
+    // Calculate potential new index
+    let newIndex = startIndex;
+    for (let i = 0; i < order.length; i++) {
+      if (order[i] === container) continue;
+      const other = order[i];
+      const rect = other.getBoundingClientRect();
+      const center = rect.left + rect.width / 2;
+      const draggedCenter = container.getBoundingClientRect().left + container.offsetWidth / 2;
+      if (draggedCenter > center) newIndex = i;
+    }
 
-    // Remove container from array temporarily
-    const tempSlots = slots.filter(c => c !== container);
-    tempSlots.splice(newIndex, 0, container);
-    
-    // Move others to new positions
-    tempSlots.forEach((c, i) => {
-      if (c !== container) c.style.left = i * SLOT_WIDTH + 'px';
+    // Shift others
+    order.forEach((c, i) => {
+      if (c === container) return;
+      let offset = 0;
+      if (i >= Math.min(startIndex, newIndex) && i <= Math.max(startIndex, newIndex)) {
+        offset = startIndex < newIndex ? -SLOT_WIDTH : SLOT_WIDTH;
+      }
+      c.style.transform = `translateX(${offset}px)`;
     });
   });
 
@@ -85,30 +139,29 @@ function createUnit() {
     if (!isDragging) return;
     isDragging = false;
     container.style.zIndex = '';
+    container.style.transform = '';
 
-    // Snap container to nearest slot
-    const center = container.offsetLeft + SLOT_WIDTH/2;
-    let newIndex = Math.floor(center / SLOT_WIDTH);
-    if (newIndex < 0) newIndex = 0;
-    if (newIndex >= slots.length) newIndex = slots.length - 1;
+    // Compute final index
+    const draggedCenter = container.getBoundingClientRect().left + container.offsetWidth / 2;
+    let newIndex = 0;
+    for (let i = 0; i < order.length; i++) {
+      if (order[i] === container) continue;
+      const rect = order[i].getBoundingClientRect();
+      const center = rect.left + rect.width / 2;
+      if (draggedCenter > center) newIndex = i + 1;
+    }
 
-    // Remove container from slots and insert at newIndex
-    slots = slots.filter(c => c !== container);
-    slots.splice(newIndex, 0, container);
+    // Move container in DOM and order array
+    taskbar.insertBefore(container, taskbar.children[newIndex]);
+    order.splice(order.indexOf(container), 1);
+    order.splice(newIndex, 0, container);
 
-    updatePositions();
-  });
-}
-
-function updatePositions() {
-  slots.forEach((c,i) => {
-    c.style.left = i * SLOT_WIDTH + 'px';
+    // Reset transforms
+    order.forEach(c => c.style.transform = '');
   });
 }
 
 addBtn.addEventListener('click', createUnit);
-
-// Initial unit
 createUnit();
 </script>
 
