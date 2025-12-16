@@ -2,54 +2,116 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Iframe Spawner</title>
+<title>Iframe Grid</title>
 
 <style>
-  #container {
+  body {
+    font-family: sans-serif;
+  }
+
+  #toolbar {
+    margin-bottom: 10px;
+  }
+
+  #addBtn {
+    font-size: 20px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+
+  #grid {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 10px;
   }
+
+  .iframe-wrapper {
+    width: 378px;
+    height: 378px;
+    border: 2px solid #999;
+    position: relative;
+    cursor: grab;
+  }
+
+  .iframe-wrapper:active {
+    cursor: grabbing;
+  }
+
   iframe {
-    border: 1px solid #ccc;
-    display: block;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    border: none;
+    pointer-events: none; /* IMPORTANT: allows dragging */
   }
 </style>
-
-<script type="text/javascript">
-  function iframeLoaded(iframe) {
-      if (!iframe || !iframe.contentWindow) return;
-
-      // Reset first, then fit to content
-      iframe.style.height = "";
-      iframe.style.width = "";
-
-      iframe.style.height =
-          iframe.contentWindow.document.body.scrollHeight + "px";
-
-      iframe.style.width =
-          iframe.contentWindow.document.body.scrollWidth + "px";
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
-      const container = document.getElementById("container");
-      const iframeCount = 5;
-
-      for (let i = 0; i < iframeCount; i++) {
-          const iframe = document.createElement("iframe");
-          iframe.src = "unit.html"; // SAME ORIGIN
-          iframe.onload = () => iframeLoaded(iframe);
-          container.appendChild(iframe);
-      }
-  });
-</script>
 </head>
 
 <body>
-<h1>Iframe Auto-Resize (Parent Controlled)</h1>
-<div id="container"></div>
+
+<div id="toolbar">
+  <button id="addBtn">＋ Add</button>
+</div>
+
+<div id="grid"></div>
+
+<script>
+const grid = document.getElementById("grid");
+const addBtn = document.getElementById("addBtn");
+
+function createIframe() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "iframe-wrapper";
+  wrapper.draggable = true;
+
+  const iframe = document.createElement("iframe");
+  iframe.src = "iframePage.html"; // same-origin
+
+  wrapper.appendChild(iframe);
+  grid.appendChild(wrapper);
+
+  setupDrag(wrapper);
+}
+
+// Drag & drop reorder
+let dragged = null;
+
+function setupDrag(el) {
+  el.addEventListener("dragstart", () => {
+    dragged = el;
+    el.style.opacity = "0.5";
+  });
+
+  el.addEventListener("dragend", () => {
+    el.style.opacity = "1";
+    dragged = null;
+  });
+
+  el.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+
+  el.addEventListener("drop", () => {
+    if (dragged && dragged !== el) {
+      const nodes = [...grid.children];
+      const draggedIndex = nodes.indexOf(dragged);
+      const targetIndex = nodes.indexOf(el);
+
+      if (draggedIndex < targetIndex) {
+        grid.insertBefore(dragged, el.nextSibling);
+      } else {
+        grid.insertBefore(dragged, el);
+      }
+    }
+  });
+}
+
+addBtn.addEventListener("click", createIframe);
+
+// Start with a few
+for (let i = 0; i < 3; i++) {
+  createIframe();
+}
+</script>
+
 </body>
 </html>
-
-
