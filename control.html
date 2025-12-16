@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Iframe Spawner with Auto-Resize</title>
+  <title>Iframe Auto-Resize Parent-Controlled</title>
   <style>
     #container {
       display: flex;
@@ -10,46 +10,65 @@
       gap: 10px;
     }
     iframe {
-      width: 100%; /* let JS control height */
+      width: 100%;
       border: 1px solid #ccc;
+      display: block;
+      overflow: hidden; /* hide scrollbars */
     }
   </style>
 </head>
 <body>
-<h1>Iframe Spawner Example</h1>
+<h1>Iframe Auto-Resize Example</h1>
 <div id="container"></div>
 
 <script>
 const container = document.getElementById("container");
-const iframeCount = 5; // Number of iframes to spawn
+const iframeCount = 5;
 const iframes = [];
+
+// Function to resize an iframe to match its content
+function resizeIframe(iframe) {
+  try {
+    const doc = iframe.contentDocument || iframe.contentWindow.document;
+    const body = doc.body;
+    const html = doc.documentElement;
+
+    const height = Math.max(
+      body.scrollHeight, body.offsetHeight,
+      html.clientHeight, html.scrollHeight, html.offsetHeight
+    );
+    const width = Math.max(
+      body.scrollWidth, body.offsetWidth,
+      html.clientWidth, html.scrollWidth, html.offsetWidth
+    );
+
+    iframe.style.height = height + "px";
+    iframe.style.width = width + "px";
+  } catch (err) {
+    console.warn("Cannot access iframe (cross-origin?)", err);
+  }
+}
 
 // Spawn iframes
 for (let i = 0; i < iframeCount; i++) {
   const frame = document.createElement("iframe");
-  frame.src = "unit.html";  // Must be same origin to share cookies
+  frame.src = "unit.html";  // MUST be same-origin
   frame.style.width = "100%";
   frame.style.border = "1px solid #ccc";
+  frame.style.overflow = "hidden";
+
+  // Resize after content loads
+  frame.addEventListener("load", () => resizeIframe(frame));
 
   container.appendChild(frame);
   iframes.push(frame);
 }
 
-// Listen for messages from iframes
-window.addEventListener("message", (e) => {
-  // Expect messages like { type: 'resize', height: ..., width: ... }
-  if (e.data.type === 'resize' && e.source) {
-    e.source.frameElement.style.height = e.data.height + "px";
-    if (e.data.width) {
-      e.source.frameElement.style.width = e.data.width + "px";
-    }
-  }
-
-  // Example: other communication
-  if (e.data.type === 'message') {
-    console.log("Parent received:", e.data.msg);
-  }
-});
+// Optional: periodically adjust sizes for dynamic content
+setInterval(() => {
+  iframes.forEach(resizeIframe);
+}, 500); // adjust every 0.5s
 </script>
 </body>
 </html>
+
