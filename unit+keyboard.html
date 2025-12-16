@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>3D Content Frame</title>
+
+    <style>
+        body {
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            background:lightgray;
+            font-family:Arial, sans-serif;
+        }
+        .image{
+           user-select: none;
+           user-drag: none;
+           position: absolute;
+           width:6cm;
+           height:6cm;
+           z-index:600;
+           position:absolute;
+           bottom: -2.8cm;
+           right:0.55cm;
+           overflow: hidden;
+           contents-align:center;
+        
+        }
+        .image2{
+           user-select: none;
+           user-drag: none;
+           position: absolute;
+           rotate: 15deg;
+           width:0.4cm;
+           z-index:1200;
+           left:0.05cm;
+           top:0.2cm;
+           position:absolute;
+          
+        
+        }
+        .image3{
+           user-select: none;
+           user-drag: none;
+           position:absolute;
+           rotate: 90deg;
+           width: 4cm;
+           z-index:600;
+           top: -0.3cm;
+           left: -0.5cm;
+          
+        }
+        .image4{
+           user-select: none;
+           user-drag: none;
+           position:absolute;
+           rotate: 90deg;
+           width: 0.5cm;
+           z-index:600;
+           top:-0.95cm;
+           right: 0.3cm;
+        }
+        .image5{
+           user-select: none;
+           user-drag: none;
+           position:absolute;
+           rotate: -90deg;
+           width: 0.5cm;
+           z-index:600;
+           bottom: -0.95cm;
+           right: 0.3cm;
+           
+           
+        }
+        .knobfiled{
+           width:4.5cm;
+           height:4.5cm;
+           background:white;
+           position:absolute;
+           bottom: -2cm;
+           right:1.3cm;
+           overflow: hidden;
+           contents-align:center;
+        }
+        .platel{
+           width:1.4cm;
+           height:3.5cm;
+           background:black;
+           position:absolute;
+           top: -1cm;
+           right:-0.8cm;
+           border-radius: 0 0 0 4mm;
+           z-index:200;
+           box-shadow:
+                0 3mm 5mm rgba(0,0,0,0.35),
+                inset 0 0mm 5mm rgba(150,150,150,1.95);
+        }
+        .plater{
+           width:1.4cm;
+           height:3.5cm;
+           position:absolute;
+           top: -1cm;
+           left:-0.8cm;
+           background: black;
+           border-radius: 0 0 4mm 0;
+           z-index:200;
+           box-shadow:
+                0 3mm 5mm rgba(0,0,0,0.35),
+                inset 0 0mm 5mm rgba(150,150,150,1.95);
+                
+        }
+        .platet{
+           width:6.5cm;
+           height:3.2cm;
+           position:absolute;
+           top: -1cm;
+           left: -1cm;
+           background: black;
+           border-radius: 0 0 4mm 0;
+           z-index:300;
+           overflow: hidden;
+           box-shadow:
+                inset 0 0mm 2mm rgba(150,150,150,0.2);
+          
+        }
+        .plateradius{
+           width:3.33cm;
+           height:3.3cm;
+           position:absolute;
+           
+           background: white;
+           border-radius: 20mm;
+           z-index:300;
+           top: 1.6cm;
+           left: 60px;
+           box-shadow:
+               inset 0 0mm 3mm rgba(150,150,150,1.95),
+               0 0mm 8mm rgba(150,150,150,1.95)
+                
+                
+          
+        }
+        .knob{
+           background:red;
+           border-radius:2cm;
+           width:3cm;
+           height:3cm;
+           position:absolute;
+           top: 50%;
+           left: 50%;
+           z-index:1000;
+           align-content: center;
+           transform: translate(-50%, -50%);
+           box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 4mm rgba(0,0,0,0.25);
+           
+           
+        }
+        
+        .knob:active svg path {
+      filter: brightness(0.7); /* darken everything */
+    }
+        .knob:active {
+      background: #960800;
+    }
+    
+        .stopgo{
+           position:absolute;
+           top: 1cm;
+           right:1.2cm;
+        }
+        .LED{
+            width:4mm;
+            height: 4mm;
+            position:absolute;
+            background:red;
+            border-radius:50%;
+            margin:2px;
+    
+            /* Rounded head sticking out 1mm */
+            box-shadow:
+                0 0mm 3mm rgba(255,0,0,1),
+                inset 0 0mm 1.2mm rgba(0,0,0,1.25);
+        }
+        .narrow{
+        margin-left:0.7mm;
+        width:4mm;
+        //background:orange;
+         z-index:101;
+         justify-content: center;
+         display:flex;
+         white-space: nowrap;
+         
+        }
+        .rButton:active{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #960800;
+        float: left; 
+        box-shadow:
+                
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .rButton{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        min-width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: red;
+        float: left; 
+        box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.65);
+        }
+        
+        
+        
+        
+        .gButton:active{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #004a14;
+        float: left; 
+        box-shadow:
+                
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .gButton{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        min-width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #008f1d;
+        float: left; 
+        box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.55);
+        }
+        
+        .address{
+        user-select: none;
+           user-drag: none;
+         margin-left:1.3mm;
+         margin-right:1.3mm;
+         float: left;
+         color:white;
+         z-index:200;
+        }
+        
+        .addrF{
+         position: absolute;
+         left:7mm;
+         top:2.8cm;
+         width: 3.2cm;
+         height:4.7cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .keys{
+         position: absolute;
+         right:7mm;
+         bottom:1.1cm;
+         width: 9.5cm;
+         height:5.0cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .func{
+         position: absolute;
+         right:7mm;
+         top:2.8cm;
+         width: 4.3cm;
+         height:2.35cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .locoD{
+         position: absolute;
+         left:1.1cm;
+         top:30px;
+         width: 3.2cm;
+         height:1.2cm;
+         background-color:#000b1c;
+         z-index:100;
+         
+        }
+        .keyboardD{
+         position: absolute;
+         left:1.1cm;
+         top:30px;
+         width: 2.0cm;
+         height:1.2cm;
+         background-color:black;
+         z-index:100;
+         border-radius:1mm;
+         border: 2px inset rgba(100,100,100,0.65)
+         
+         
+        }
+        .asrow1{
+         gap: 7.8mm;
+         display:flex;
+         white-space: nowrap;
+         width: 3.2cm;
+         height:6mm;
+         //background-color:yellow;
+         z-index:101;
+        
+        }
+        
+        .asrow2{
+         gap: 7.0mm; 
+         overflow-x: auto; 
+         display:flex;
+         white-space: nowrap;
+         width: 3.2cm;
+         height:6mm;
+         //background-color:purple;
+         z-index:101;
+      
+        
+        }
+        .frow1{
+         gap: 7.8mm;
+         display:flex;
+         white-space: nowrap;
+         width: 4.7cm;
+         height:6mm;
+         //background-color:yellow;
+         z-index:101;
+         
+        
+        }
+        
+        .frow2{
+         gap: 7.0mm; 
+         overflow-x: auto; 
+         display:flex;
+         white-space: nowrap;
+         width: 4.7cm;
+         height:6mm;
+         //background-color:purple;
+         z-index:101;
+      
+        }
+        .arow1{
+        
+         width: 3.2cm;
+         height:1.2cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px;
+        
+        }
+                    
+        .LEDrow{
+         gap: 8.1mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+        .REDrow{
+         gap: 7.3mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101; 
+        }
+        .Addressrow{
+         
+         gap: 8.1mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+        .GREENrow{
+         gap: 7.3mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+    
+        
+        .sevensegment{
+        user-select: none;
+           user-drag: none;
+        padding-left:3px;
+        letter-spacing: -2px;
+         color: red;
+         line-height: 0.95;
+          font-family: "seven segment";
+          font-style: italic;
+         text-shadow: 0 0 0 transparent; 
+         font-size: 1.2cm;
+         font-weight: 800;
+           transform: scaleX(1.2);
+      filter:
+        
+        drop-shadow(0px 0px 2px rgba(255,0,0,1.5));
+          
+        
+        }
+        .sevensegment-key{
+        user-select: none;
+           user-drag: none;
+        padding-left:3px;
+        letter-spacing: -2px;
+         color: white;
+         line-height: 0.95;
+          font-family: "seven segment";
+          font-style: italic;
+         font-size: 1.2cm;
+         font-weight: 500;
+           transform: scaleX(1.2);
+        
+        }
+        
+        .nrow1{
+        
+         text-align: left;
+         width: 9.5mm;
+         height:1.1cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px;
+        
+        }
+    
+        
+        .arrow{
+        user-select: none;
+           user-drag: none;
+         width: 1.2cm;
+         height:1.1cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px
+        }
+        
+        .frame{
+        user-select: none;
+           user-drag: none;
+        width: 450px;
+        height:450px;
+        display: table-cell;
+        transform: scale(1);
+        }
+    
+        /* Outer white rectangle */
+       
+        .outer-frame { 
+        user-select: none;
+           user-drag: none;
+            width:11.8cm;
+            height:11.8cm;
+            background:#ffffff;
+            border-radius:4mm 4mm 7mm 7mm;
+            position:relative;
+    
+            /* subtle shading + structure */
+            box-shadow:
+                0 2mm 4mm rgba(0,0,0,0.25),
+                inset 0 0 3mm rgba(0,0,0,0.25);
+                
+        }
+        .underscore{
+        user-select: none;
+           user-drag: none;
+           font-family:Consolas;
+           font-size:7.5px;
+           position: relative;
+           top:-0.9px;
+           padding:1px;
+        }
+    
+        /* Editable text area*/
+        .label{
+        user-select: none;
+           user-drag: none;
+            position:absolute;
+            left:6mm;
+            bottom:2mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            
+            font-size:12pt;
+            font-family:"Starch Slab",Courier New, arial;
+           
+            
+        }
+        .label2{
+        user-select: none;
+           user-drag: none;
+           color: white;
+           position:absolute;
+            right:10mm;
+            top:3mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            
+            font-size:17pt;
+            font-family:"Marklin","Courier New", arial;
+            font-weight: 900;
+           z-index:1;
+            
+        }
+        .label3{
+        user-select: none;
+           user-drag: none;
+           color: white;
+           position:absolute;
+            right:10mm;
+            top:13mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            font-size:6pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+            
+        }
+    
+        /* Inner black lifted frame */
+        .inner-frame {
+        user-select: none;
+           user-drag: none;
+            width:10.9cm;
+            height:8.9cm;
+            background:#000;
+            border-radius:3mm 3mm 5mm 5mm;
+            position:absolute;
+            left:50%;
+            transform:translateX(-50%);
+            top:0mm; /* still touching top */
+            
+            /* Raised 3mm above plate using shadow height simulation */
+            box-shadow:
+                0 3mm 5mm rgba(0,0,0,0.35),
+                inset 0 0 6mm rgba(150,150,150,1.95);
+        }
+    
+        /* Bolts */
+        .bolt {
+        user-select: none;
+           user-drag: none;
+            width:4mm;
+            height:4mm;
+            position:absolute;
+            background:#222;
+            border-radius:50%;
+    
+            /* Rounded head sticking out 1mm */
+            box-shadow:
+                0 1mm 2mm rgba(0,0,0,0.35),
+                inset 0 0.6mm 1.2mm rgba(255,255,255,0.25);
+        }
+    
+        /* Bolt positions (always 5mm inside black frame edges) */
+        .bolt.tl { top:5mm; left:5mm; }
+        .bolt.tr { top:5mm; right:5mm; }
+        .bolt.bl { bottom:5mm; left:5mm; }
+        .bolt.br { bottom:5mm; right:5mm; }
+    </style>
+</head>
+
+<body>
+    <div class="frame">
+        <div class="outer-frame">
+
+            <div class=""></div>
+            <p class="label">keyboard</p>
+            <p class="label2">märklin</p>
+            <p class="label3">DIGITAL<span class="underscore">_________</span>H0</p>
+            <div class="inner-frame">
+            <div class="keyboardD">
+                    <div class="nrow1">
+                        <div class="sevensegment-key" id="/nrow1">0</div>
+                    </div>
+                    <div class="nrow1">
+                        <div class="sevensegment-key" id="/nrow2">2</div>
+                    </div>
+       
+                </div>
+                <div class="keys">
+                    <div class="LEDrow">
+                       <div class="narrow">
+                          <div id="a1" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a2" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a3" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a4" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a5" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a6" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a7" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a8" class="LED"></div>
+                       </div>
+                    </div>
+                    <div class="REDrow">
+                       <div onclick="turnLEDOn('a1')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a2')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a3')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a4')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a5')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a6')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a7')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a8')" class="rButton"></div>
+                    </div>
+                    <div class="Addressrow">
+                       <div class="narrow">
+                          <div class="address">1</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">2</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">3</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">4</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">5</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">6</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">7</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">8</div>
+                       </div>
+                    </div>
+                    <div class="GREENrow">
+                       <div onclick="turnLEDOff('a1')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a2')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a3')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a4')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a5')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a6')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a7')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a8')" class="gButton"></div>
+                    </div>
+                    <div class="LEDrow">
+                       <div class="narrow">
+                          <div id="a9" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a10" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a11" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a12" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a13" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a14" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a15" class="LED"></div>
+                       </div>
+                       <div class="narrow">
+                          <div id="a16" class="LED"></div>
+                       </div>
+                    </div>
+                    <div class="REDrow">
+                       <div onclick="turnLEDOn('a9')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a10')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a11')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a12')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a13')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a14')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a15')" class="rButton"></div>
+                       <div onclick="turnLEDOn('a16')" class="rButton"></div>
+                    </div>
+                    <div class="Addressrow">
+                       <div class="narrow">
+                          <div class="address">9</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">10</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">11</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">12</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">13</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">14</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">15</div>
+                       </div>
+                       <div class="narrow">
+                          <div class="address">16</div>
+                       </div>
+                    </div>
+                    <div class="GREENrow">
+                       <div onclick="turnLEDOff('a9')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a10')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a11')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a12')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a13')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a14')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a15')" class="gButton"></div>
+                       <div onclick="turnLEDOff('a16')" class="gButton"></div>
+                    </div>
+                </div>   
+                <div>
+                    <div class="bolt tl"></div>
+                    <div class="bolt tr"></div>
+                    <div class="bolt bl"></div>
+                    <div class="bolt br"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="frame">
+        <div class="outer-frame">
+
+            <div class=""></div>
+            <p class="label">control 80f</p>
+            <p class="label2">märklin</p>
+            <p class="label3">DIGITAL<span class="underscore">_________</span>H0</p>
+            <div class="inner-frame">
+                <svg class="image" width="400" height="400" viewBox="-200 -200 400 400" xmlns="http://www.w3.org/2000/svg">
+                    <g stroke="#ffffff">
+                        <line x1="-114.47868959152449" y1="-67.7025082947994" x2="-127.38981999658364" y2="-75.33812953105497" stroke-width="5"></line>
+                        <text x="-144.60466053666252" y="-85.5189578460624" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, -144.60466053666252, -85.5189578460624)">0</text>
+                        <line x1="-108.4765033426854" y1="-76.9535458737566" x2="-120.71069544900331" y2="-85.63251721290207" stroke-width="2"></line>
+                        <line x1="-101.72856528867062" y1="-85.67554496067521" x2="-113.20171174979889" y2="-95.3382004073679" stroke-width="2"></line>
+                        <line x1="-94.28126600098565" y1="-93.80854375402801" x2="-104.91449148981863" y2="-104.3884547037304" stroke-width="2"></line>
+                        <line x1="-86.18580400388542" y1="-101.29662969814864" x2="-95.90600746297024" y2="-112.72106161899248" stroke-width="2"></line>
+                        <line x1="-77.4978337959206" y1="-108.08832386960151" x2="-86.23819099094924" y2="-120.27873633609792" stroke-width="5"></line>
+                        <text x="-97.89200058432075" y="-136.5326196247598" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, -97.89200058432075, -136.5326196247598)">50</text>
+                        <line x1="-68.27708323765317" y1="-114.13693488331715" x2="-75.97750615919301" y2="-127.00952152429277" stroke-width="2"></line>
+                        <line x1="-58.58694293591518" y1="-119.40087988546742" x2="-65.19449289109359" y2="-132.86714453420436" stroke-width="2"></line>
+                        <line x1="-48.49403044750214" y1="-123.84397042632611" x2="-53.963282001731706" y2="-137.811335512002" stroke-width="2"></line>
+                        <line x1="-38.06773229830488" y1="-127.43566124780219" x2="-42.361085565031" y2="-141.80810424567463" stroke-width="2"></line>
+                        <line x1="-27.379726966394177" y1="-130.1512602752878" x2="-30.46766609794239" y2="-144.82997384016988" stroke-width="5"></line>
+                        <text x="-34.58491827334001" y="-164.40159192667932" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, -34.58491827334001, -164.40159192667932)">100</text>
+                        <line x1="-16.503492108446007" y1="-131.9720983701724" x2="-18.364788210902322" y2="-146.8561696149287" stroke-width="2"></line>
+                        <line x1="-5.513799417212934" y1="-132.88565767601386" x2="-6.1356564943422125" y2="-147.87276192518837" stroke-width="2"></line>
+                        <line x1="5.513799417212951" y1="-132.88565767601386" x2="6.135656494342231" y2="-147.87276192518837" stroke-width="2"></line>
+                        <line x1="16.50349210844602" y1="-131.9720983701724" x2="18.36478821090234" y2="-146.8561696149287" stroke-width="2"></line>
+                        <line x1="27.37972696639422" y1="-130.1512602752878" x2="30.46766609794244" y2="-144.82997384016986" stroke-width="5"></line>
+                        <text x="34.584918273340065" y="-164.40159192667932" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, 34.584918273340065, -164.40159192667932)">150</text>
+                        <line x1="38.06773229830487" y1="-127.4356612478022" x2="42.36108556503098" y2="-141.80810424567463" stroke-width="2"></line>
+                        <line x1="48.49403044750218" y1="-123.8439704263261" x2="53.963282001731756" y2="-137.81133551200196" stroke-width="2"></line>
+                        <line x1="58.58694293591517" y1="-119.40087988546742" x2="65.19449289109357" y2="-132.86714453420436" stroke-width="2"></line>
+                        <line x1="68.27708323765322" y1="-114.13693488331712" x2="75.97750615919306" y2="-127.00952152429274" stroke-width="2"></line>
+                        <line x1="77.49783379592063" y1="-108.0883238696015" x2="86.23819099094926" y2="-120.27873633609791" stroke-width="5"></line>
+                        <text x="97.89200058432078" y="-136.53261962475977" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, 97.89200058432078, -136.53261962475977)">200</text>
+                        <line x1="86.18580400388542" y1="-101.29662969814864" x2="95.90600746297024" y2="-112.72106161899248" stroke-width="2"></line>
+                        <line x1="94.28126600098567" y1="-93.808543754028" x2="104.91449148981864" y2="-104.38845470373039" stroke-width="2"></line>
+                        <line x1="101.72856528867062" y1="-85.6755449606752" x2="113.20171174979889" y2="-95.33820040736789" stroke-width="2"></line>
+                        <line x1="108.47650334268543" y1="-76.95354587375655" x2="120.71069544900334" y2="-85.63251721290203" stroke-width="2"></line>
+                        <line x1="114.47868959152451" y1="-67.70250829479937" x2="127.38981999658368" y2="-75.33812953105493" stroke-width="5"></line>
+                        <text x="144.60466053666255" y="-85.51895784606236" font-family="sans-serif" font-size="19" font-weight="normal" fill="#ffffff" text-anchor="middle" dominant-baseline="middle" transform="rotate(0, 144.60466053666255, -85.51895784606236)">250</text>
+                    </g>
+                </svg>
+
+                <div class="knobfiled">
+                    <svg class="image2" width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20,50 
+           Q20,48 22,48 
+           L180,10 
+           Q182,10 182,12 
+           L182,88 
+           Q182,90 180,90 
+           L22,52 
+           Q20,52 20,50 
+           Z" fill="white"></path>
+                    </svg>
+
+                    <div id="knob" class="knob">
+                        <svg class="image3" width="600" height="150" viewBox="0 0 600 150" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feDropShadow dx="0" dy="0" stdDeviation="10" flood-color="rgba(0,0,0,0.5)" />
+                                </filter>
+                            </defs>
+
+                            <!-- Outer triangle (darker red) with shadow -->
+                            <path d="M10,75 
+           Q10,70 15,70 
+           L590,15 
+           Q595,15 595,20 
+           L595,130 
+           Q595,135 590,135 
+           L15,80 
+           Q10,80 10,75 
+           Z" fill="#990000" filter="url(#shadow)" />
+
+                            <!-- Inner triangle (original red) with shadow -->
+                            <path d="M10,75 
+           Q10,72 15,72 
+           L540,40 
+           Q545,40 545,45 
+           L545,105 
+           Q545,110 540,110 
+           L15,78 
+           Q10,78 10,75 
+           Z" fill="red" filter="url(#shadow)" />
+                        </svg>
+
+                    </div>
+                    <div class="platel"></div>
+                    <div class="plater"></div>
+                    <div class="platet">
+                        <div class="plateradius"></div>
+                    </div>
+                    <script>
+                        const ROT_MIN = -60;      // normal min
+                        const ROT_MAX = 60;       // normal max
+                        const SPECIAL_MIN = -70;  // special zone left limit
+                        const START_SPECIAL = ROT_MIN; // must start from normal min
+                        
+                        let angle = ROT_MIN;
+                        let dragging = false;
+                        let lastMouseAngle = 0;
+                        let inSpecialDrag = false;
+                        let specialTriggered = false;
+                        
+                        const knob = document.getElementById("knob");
+                        
+                        let cx, cy; // store center of knob at drag start
+                        
+                        function updateKnob(){
+                            knob.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+                        
+                        }
+                        
+                        function springBack(){
+                            const interval = setInterval(()=>{
+                                angle += (ROT_MIN - angle) * 0.2;
+                                if(Math.abs(angle - ROT_MIN) < 0.5){
+                                    angle = ROT_MIN;
+                                    inSpecialDrag=false;
+                                    specialTriggered=false;
+                                    clearInterval(interval);
+                                }
+                                updateKnob();
+                            },16);
+                        }
+                        
+                        function triggerSpecial(){
+                            // Hook your special action here
+                            specialTriggered=true;
+                            springBack();
+                            toggleLEDs();
+                        }
+                        
+                        function getMouseAngle(e){
+                            return Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI;
+                        }
+                        function getSpeed() {
+    // Map full range (-60 to +60) into 0–14
+    let normalized = (angle - ROT_MIN) / (ROT_MAX - ROT_MIN); 
+    // normalized becomes:
+    // angle=-60 → 0
+    // angle= 60 → 1
+
+    let speed = normalized * 14;
+
+    // Round to integer and clamp
+    return Math.max(0, Math.min(14, Math.round(speed)));
+}
+
+
+                        let speedTimer = null;
+
+                        // Mouse events
+                        knob.addEventListener("mousedown", e=>{
+                            const rect = knob.getBoundingClientRect();
+                            cx = rect.left + rect.width/2;
+                            cy = rect.top + rect.height/2;
+                        
+                            dragging=true;
+                            lastMouseAngle = getMouseAngle(e);
+                            inSpecialDrag = (angle === START_SPECIAL);
+                            if (!speedTimer) {
+        speedTimer = setInterval(() => {
+            console.log("Speed:", getSpeed());
+            let addrData = loadAddressData(Address);
+                      addrData.speed = getSpeed();
+                      saveAddressData(Address, addrData);
+                      LocoAction()
+        }, 200);
+    }
+                        });
+                        
+                        document.addEventListener("mouseup", ()=>{
+                            if(dragging){
+                                dragging=false;
+                                if (speedTimer) {
+            clearInterval(speedTimer);
+            speedTimer = null;
+        }
+                                if(inSpecialDrag){
+                                    if(angle <= SPECIAL_MIN){
+                                        triggerSpecial();
+                                    } else if(angle < ROT_MIN){
+                                        springBack();
+                                    }
+                                }
+                            }
+                        });
+                        
+                        document.addEventListener("mousemove", e=>{
+                            if(!dragging) return;
+                        
+                            let a = getMouseAngle(e);
+                            let delta = a - lastMouseAngle;
+                            if(delta > 180) delta -= 360;
+                            if(delta < -180) delta += 360;
+                        
+                            angle += delta;
+                            lastMouseAngle = a;
+                        
+                            // Clamp right
+                            if(angle > ROT_MAX) angle = ROT_MAX;
+                        
+                            // Clamp left
+                            if(!inSpecialDrag){
+                                if(angle < ROT_MIN) angle = ROT_MIN;
+                            } else {
+                                if(angle < SPECIAL_MIN) angle = SPECIAL_MIN;
+                            }
+                        
+                            updateKnob();
+                        });
+                        
+                        
+                        updateKnob();
+                    </script>
+                    <script>
+                        // LED IDs
+                        const led1Id = 'up';
+                        const led2Id = 'down';
+                        
+                        let activeLED = 0;      // 0 = both off, 1 = led1 on, 2 = led2 on
+                        let ledsInitialized = false;
+                        
+                        // Immediately turn both LEDs off on load
+                        window.addEventListener('DOMContentLoaded', () => {
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                            if (!led1 || !led2) return console.warn('LED not found');
+                        
+                            // store original class and style
+                            if (!led1.dataset.originalClass) {
+                                led1.dataset.originalClass = led1.className;
+                                led1.dataset.originalStyle = led1.getAttribute('style') || '';
+                            }
+                            if (!led2.dataset.originalClass) {
+                                led2.dataset.originalClass = led2.className;
+                                led2.dataset.originalStyle = led2.getAttribute('style') || '';
+                            }
+                        
+                            // Turn both off initially
+                            [led1, led2].forEach(el => {
+                                el.className = '';
+                                el.style.width = '0px';
+                                el.style.height = '0px';
+                                el.style.margin = '0px';
+                            });
+                        });
+                        
+                        // Initialize LEDs: first LED turns on
+                        function initializeLEDs() {
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                            if (!led1 || !led2) return console.warn('LED not found');
+                        
+                            // Turn on the first LED
+                            led1.className = led1.dataset.originalClass;
+                            led1.setAttribute('style', led1.dataset.originalStyle);
+                        
+                            // Ensure second LED stays off
+                            led2.className = '';
+                            led2.style.width = '0px';
+                            led2.style.height = '0px';
+                            led2.style.margin = '0px';
+                        
+                            activeLED = 1;
+                            ledsInitialized = true;
+                        }
+                        
+                        // Toggle LEDs between them
+                        function toggleLEDs() {
+                            if (!ledsInitialized) return console.warn('LEDs not initialized. Call initializeLEDs first.');
+                        
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                        
+                            if (activeLED === 1) {
+                                // Turn off LED1, turn on LED2
+                                led1.className = '';
+                                led1.style.width = '0px';
+                                led1.style.height = '0px';
+                                led1.style.margin = '0px';
+                        
+                                led2.className = led2.dataset.originalClass;
+                                led2.setAttribute('style', led2.dataset.originalStyle);
+                        
+                                activeLED = 2; 
+                                let addrData = loadAddressData(Address);
+                                addrData.dir = true;
+                                saveAddressData(Address, addrData);
+                                LocoAction()
+                            } else {
+                                // Turn off LED2, turn on LED1
+                                led2.className = '';
+                                led2.style.width = '0px';
+                                led2.style.height = '0px';
+                                led2.style.margin = '0px';
+                        
+                                led1.className = led1.dataset.originalClass;
+                                led1.setAttribute('style', led1.dataset.originalStyle);
+                         
+                                activeLED = 1;
+                                let addrData = loadAddressData(Address);
+                                addrData.dir = false;
+                                saveAddressData(Address, addrData);
+                                LocoAction()
+                            }
+                        }
+                        
+                        // Uninitialize LEDs: turn both off
+                        function uninitializeLEDs() {
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                            if (!led1 || !led2) return console.warn('LED not found');
+                        
+                            [led1, led2].forEach(el => {
+                                el.className = '';
+                                el.style.width = '0px';
+                                el.style.height = '0px';
+                                el.style.margin = '0px';
+                            });
+                        
+                            activeLED = 0;
+                            ledsInitialized = false;
+                        }
+                        
+                        // Force LED1 (up) ON
+                        function forceUp() {
+                            if (!ledsInitialized) return console.warn('LEDs not initialized. Call initializeLEDs first.');
+                        
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                        
+                            // turn LED2 off
+                            led2.className = '';
+                            led2.style.width = '0px';
+                            led2.style.height = '0px';
+                            led2.style.margin = '0px';
+                        
+                            // turn LED1 on
+                            led1.className = led1.dataset.originalClass;
+                            led1.setAttribute('style', led1.dataset.originalStyle);
+                        
+                            activeLED = 1;
+                        }
+                        
+                        // Force LED2 (down) ON
+                        function forceDown() {
+                            if (!ledsInitialized) return console.warn('LEDs not initialized. Call initializeLEDs first.');
+                        
+                            const led1 = document.getElementById(led1Id);
+                            const led2 = document.getElementById(led2Id);
+                        
+                            // turn LED1 off
+                            led1.className = '';
+                            led1.style.width = '0px';
+                            led1.style.height = '0px';
+                            led1.style.margin = '0px';
+                        
+                            // turn LED2 on
+                            led2.className = led2.dataset.originalClass;
+                            led2.setAttribute('style', led2.dataset.originalStyle);
+                        
+                            activeLED = 2;
+                        }
+                        
+                        
+                        // --- USAGE ---
+                        // initializeLEDs();   // turn first LED on
+                        // toggleLEDs();       // toggle between LEDs
+                        // uninitializeLEDs(); // turn both off
+                    </script>
+
+                </div>
+                <div class="stopgo">
+                    <div id="go" class="LED"></div>
+                </div>
+                <div class="locoD">
+                    <div class="nrow1">
+                        <div class="sevensegment" id="nrow1"></div>
+                    </div>
+                    <div class="nrow1">
+                        <div class="sevensegment" id="nrow2"></div>
+                    </div>
+                    <div class="arrow">
+                        <div>
+                            <svg id="up" class="image4" width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+
+                                <defs>
+                                    <filter id="shadowFilter" x="-50%" y="-50%" width="400%" height="800%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="red" flood-opacity="1.7" />
+                                    </filter>
+                                </defs>
+
+                                <path filter="url(#shadowFilter)" d="M20,50 Q20,48 22,48 L180,10 
+           Q182,10 182,12 L182,88 
+           Q182,90 180,90 L22,52 
+           Q20,52 20,50 Z" fill="red" />
+                            </svg>
+
+                        </div>
+                        <div>
+                            <svg id="down" class="image5" width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+
+                                <defs>
+                                    <filter id="shadowFilter" x="-50%" y="-50%" width="400%" height="800%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="red" flood-opacity="1.7" />
+                                    </filter>
+                                </defs>
+
+                                <path filter="url(#shadowFilter)" d="M20,50 Q20,48 22,48 L180,10 
+           Q182,10 182,12 L182,88 
+           Q182,90 180,90 L22,52 
+           Q20,52 20,50 Z" fill="red" />
+                            </svg>
+
+                        </div>
+
+                    </div>
+                    <script>
+                        const numDiv1 = document.getElementById('nrow1');
+                        const numDiv2 = document.getElementById('nrow2');
+                        
+                        let buffer = []; // stores last 2 numbers
+                        
+                        function selAddress(nr) {
+                          if (buffer.length < 2) {
+                            buffer.push(nr);
+                          } else {
+                            buffer = [nr];
+                          }
+                        
+                          numDiv1.textContent = buffer[0] ?? '';
+                          numDiv2.textContent = buffer[1] ?? '';
+                        
+                          if (buffer.length === 2) {
+                            onTwoNumbersFilled(buffer[0], buffer[1]);
+                          }
+                        }
+                        function bothNumbersSet() {
+                          return buffer.length === 2;
+                        }
+                        // Example custom function
+                        function onTwoNumbersFilled(nr1, nr2) {
+                          console.log("Both numbers entered:", nr1, nr2);
+                          console.log("Both numbers entered:", nr1+nr2);
+                          window.Address = nr1+nr2;
+                          console.log(Address);
+                          if (isLEDOn('LLED')) {
+                            initializeLEDs('up','down');
+                            let addrData = loadAddressData(nr1+nr2);
+                            if(addrData.f0==true){
+                               turnLEDOn('f0');
+                            }
+                            else{
+                               turnLEDOff('f0');
+                            }
+                            if(addrData.f1==true){
+                               forceLEDOn("f1");
+                            }
+                            else{
+                               forceLEDOff("f1");
+                            }
+                            if(addrData.f2==true){
+                               forceLEDOn("f2");
+                            }
+                            else{
+                               forceLEDOff("f2");
+                            }
+                            if(addrData.f3==true){
+                               forceLEDOn("f3");
+                            }
+                            else{
+                               forceLEDOff("f3");
+                            }
+                            if(addrData.f4==true){
+                               forceLEDOn("f4");
+                            }
+                            else{
+                               forceLEDOff("f4");
+                            }
+                            if(addrData.dir==true){
+                               forceDown();
+                            }
+                            else{
+                               forceUp();
+                            } 
+                            addrData.speed = getSpeed();
+                            saveAddressData(Address, addrData); 
+                            LocoAction();
+                            
+                            
+                        }
+                          // Do whatever you want here
+                        }
+                    </script>
+                </div>
+                <div class="addrF">
+                    <div class="arow1">
+                        <div class="asrow1">
+                            <div class="address">1</div>
+                            <div class="address">2</div>
+                            <div class="address">3</div>
+                        </div>
+                        <div class="asrow2">
+                            <div onclick="selAddress('1')" class="gButton"></div>
+                            <div onclick="selAddress('2')" class="gButton"></div>
+                            <div onclick="selAddress('3')" class="gButton"></div>
+                        </div>
+                    </div>
+                    <div class="arow1">
+                        <div class="asrow1">
+                            <div class="address">4</div>
+                            <div class="address">5</div>
+                            <div class="address">6</div>
+                        </div>
+                        <div class="asrow2">
+                            <div onclick="selAddress('4')" class="gButton"></div>
+                            <div onclick="selAddress('5')" class="gButton"></div>
+                            <div onclick="selAddress('6')" class="gButton"></div>
+                        </div>
+                    </div>
+                    <div class="arow1">
+                        <div class="asrow1">
+                            <div class="address">7</div>
+                            <div class="address">8</div>
+                            <div class="address">9</div>
+                        </div>
+                        <div class="asrow2">
+                            <div onclick="selAddress('7')" class="gButton"></div>
+                            <div onclick="selAddress('8')" class="gButton"></div>
+                            <div onclick="selAddress('9')" class="gButton"></div>
+                        </div>
+                    </div>
+                    <div class="arow1">
+                        <div class="asrow1">
+                            <div class="narrow">
+                                <div class="address">L</div>
+                                <div id="LLED" class="LED"></div>
+                            </div>
+                            <div class="address">0</div>
+                            <div class="narrow">
+                                <div class="address">F</div>
+                                <div id="FLED" class="LED"></div>
+                            </div>
+
+                        </div>
+                        <div class="asrow2">
+                            <div onclick="if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="rButton"></div>
+                            <div onclick="selAddress('0')" class="gButton"></div>
+                            <div onclick="uninitializeLEDs();selectLED('FLED','LLED')" class="rButton"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="func">
+                    <div class="arow1">
+                        <div class="frow1">
+                            <div class="narrow">
+                                <div class="address">f1</div>
+                                <div id="f1" class="LED"></div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">f2</div>
+                                <div id="f2" class="LED"></div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">off</div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">stop</div>
+                            </div>
+                        </div>
+                        <div class="frow2">
+                            <div onclick="toggleLED('f1');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="toggleLED('f2');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="turnLEDOff('f0');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="turnLEDOff('go')" class="rButton"></div>
+                        </div>
+                    </div>
+                    <div class="arow1">
+                        <div class="frow1">
+                            <div class="narrow">
+                                <div class="address">f3</div>
+                                <div id="f3" class="LED"></div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">f4</div>
+                                <div id="f4" class="LED"></div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">function</div>
+                                <div id="f0" class="LED"></div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">go</div>
+                            </div>
+                        </div>
+                        <div class="frow2">
+                            <div onclick="toggleLED('f3');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="toggleLED('f4');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="turnLEDOn('f0');if(bothNumbersSet()){initializeLEDs()};selectLED('LLED','FLED')" class="gButton"></div>
+                            <div onclick="turnLEDOn('go')" class="gButton"></div>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    // Reads cookie by name
+                function getCookie(name) {
+                    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+                    return match ? decodeURIComponent(match[2]) : null;
+                }
+                
+                // Writes cookie
+                function setCookie(name, value, days = 365) {
+                    const expires = new Date(Date.now() + days*24*60*60*1000).toUTCString();
+                    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+                }
+                
+                // Converts object → cookie string
+                function encodeData(obj) {
+                    return JSON.stringify(obj);
+                }
+                
+                // Converts cookie string → object
+                function decodeData(str) {
+                    try {
+                        return JSON.parse(str);
+                    } catch {
+                        return null;
+                    }
+                }
+                
+                // Main function:
+                // Loads cookie or creates one with defaults
+                function loadAddressData(address) {
+                    const cookieName = `addr_${address}`;
+                    let data = getCookie(cookieName);
+                
+                    if (data) {
+                        // cookie exists → decode it
+                        const parsed = decodeData(data);
+                        if (parsed) {
+                            return parsed;   // return loaded values
+                        }
+                    }
+                
+                    // cookie does NOT exist → create default data
+                    const defaultData = {
+                        speed: 0,
+                        direction: false,
+                        f0: false,
+                        f1: false,
+                        f2: false,
+                        f3: false,
+                        f4: false
+                    };
+                
+                    // write cookie
+                    setCookie(cookieName, encodeData(defaultData));
+                
+                    return defaultData;
+                }
+                
+                // Save updated values back to cookie
+                function saveAddressData(address, dataObj) {
+                    const cookieName = `addr_${address}`;
+                    setCookie(cookieName, encodeData(dataObj));
+                }
+                </script>
+                <script>
+                    var originalClass = {}; // store original CSS class for each LED
+                    
+                    function selectLED(onLED, offLED) {
+                        var onEl  = document.getElementById(onLED);
+                        var offEl = document.getElementById(offLED);
+                    
+                        if (!onEl || !offEl) return console.warn('LED element not found');
+                    
+                        // Store original class if not already stored
+                        if (!(onLED in originalClass))  originalClass[onLED]  = onEl.className;
+                        if (!(offLED in originalClass)) originalClass[offLED] = offEl.className;
+                    
+                        // Turn ON: restore original CSS
+                        onEl.className = originalClass[onLED];
+                    
+                        // Turn OFF: remove all CSS
+                        offEl.className = "";
+                    }
+                    
+                    // Function to check if LED is ON
+                    function isLEDOn(id) {
+                        var el = document.getElementById(id);
+                        if (!el) return false;
+                    
+                        // If LED has never been toggled, assume ON (original CSS active)
+                        if (!(id in originalClass)) return true;
+                    
+                        // Otherwise compare to stored original class
+                        return el.className === originalClass[id];
+                    }
+                </script>
+
+
+                <script>
+                    const ledClasses = {}; // remember original LED CSS (the "ON" state)
+                    
+                    // Toggle LED on/off
+                    function toggleLED(id) {
+                        const el = document.getElementById(id);
+                        if (!el) return console.warn(`LED ${id} not found`);
+                    
+                        // save original class if not saved yet
+                        if (!(id in ledClasses)) {
+                            ledClasses[id] = el.className;
+                        }
+                    
+                        // toggle between original CSS and none
+                        if (el.className === '') {
+                            el.className = ledClasses[id]; // ON
+                            console.log(id); 
+                            let addrData = loadAddressData(Address);
+                            addrData[id] = true;
+                            saveAddressData(Address, addrData);
+                            console.log(addrData[id]); 
+                            LocoAction()
+                        } else {
+                            el.className = ''; // OFF
+                            let addrData = loadAddressData(Address);
+                            addrData[id] = false;
+                            saveAddressData(Address, addrData);
+                            LocoAction()
+                        }
+                    }
+                    
+                    // Force LED ON
+                    function forceLEDOn(id) {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                    
+                        if (!(id in ledClasses)) {
+                            ledClasses[id] = el.className;
+                        }
+                    
+                        el.className = ledClasses[id];
+                    }
+                    
+                    // Force LED OFF
+                    function forceLEDOff(id) {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                    
+                        if (!(id in ledClasses)) {
+                            ledClasses[id] = el.className;
+                        }
+                    
+                        el.className = '';
+                    }
+                    
+                    // Check LED state (true = ON, false = OFF)
+                    function isLEDOn(id) {
+                        const el = document.getElementById(id);
+                        if (!el) return false;
+                    
+                        if (!(id in ledClasses)) {
+                            ledClasses[id] = el.className; // record original class
+                        }
+                    
+                        return el.className === ledClasses[id];
+                    }
+                </script>
+
+                <script>
+                    const ledOriginalClass = {}; // store original class from HTML
+                    
+                    function turnLEDOn(id) {
+                      const el = document.getElementById(id);
+                      if (!el) return console.warn(`LED ${id} not found`);
+                    
+                      // store original class from HTML on first call
+                      if (!(id in ledOriginalClass)) {
+                        ledOriginalClass[id] = el.className || '';
+                      }
+                      if(id=="f0"){
+                      console.log(Address);  
+                      let addrData = loadAddressData(Address);
+                      addrData.f0 = true;
+                      saveAddressData(Address, addrData);
+                      console.log(addrData.f0);
+                      LocoAction()
+                      
+                      }
+                      el.className = ledOriginalClass[id]; // restore original CSS
+                    }
+                    
+                    function turnLEDOff(id) {
+                      const el = document.getElementById(id);
+                      if (!el) return console.warn(`LED ${id} not found`);
+                    
+                      // store original class if not already stored
+                      if (!(id in ledOriginalClass)) {
+                        ledOriginalClass[id] = el.className || '';
+                      }
+                      if(id=="f0"){
+                      console.log(Address);
+                      let addrData = loadAddressData(Address);
+                      addrData.f0 = false;
+                      saveAddressData(Address, addrData);
+                      console.log(addrData.f0);
+                      LocoAction()
+                      }
+                      el.className = ''; // remove all CSS
+                    }
+                </script>
+                <script>
+                    function LocoAction(){
+                       let addrData = loadAddressData(Address);
+                       console.log(Address);
+                       console.log("speed="+addrData.speed);
+                       console.log("dir="+addrData.dir);
+                       console.log("f0="+addrData.f0);
+                       console.log("f1="+addrData.f1);
+                       console.log("f2="+addrData.f2);
+                       console.log("f3="+addrData.f3);
+                       console.log("f4="+addrData.f4);
+                    }
+                </script>
+
+                <div>
+                    <div class="bolt tl"></div>
+                    <div class="bolt tr"></div>
+                    <div class="bolt bl"></div>
+                    <div class="bolt br"></div>
+                </div>
+            </div>
+        </div>
+</body>
+
+</html>

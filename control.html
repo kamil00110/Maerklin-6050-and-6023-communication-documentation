@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Iframe Spawner with Auto-Resize</title>
+  <style>
+    #container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    iframe {
+      width: 100%; /* let JS control height */
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+<h1>Iframe Spawner Example</h1>
+<div id="container"></div>
+
+<script>
+const container = document.getElementById("container");
+const iframeCount = 5; // Number of iframes to spawn
+const iframes = [];
+
+// Spawn iframes
+for (let i = 0; i < iframeCount; i++) {
+  const frame = document.createElement("iframe");
+  frame.src = "unit.html";  // Must be same origin to share cookies
+  frame.style.width = "100%";
+  frame.style.border = "1px solid #ccc";
+
+  container.appendChild(frame);
+  iframes.push(frame);
+}
+
+// Listen for messages from iframes
+window.addEventListener("message", (e) => {
+  // Expect messages like { type: 'resize', height: ..., width: ... }
+  if (e.data.type === 'resize' && e.source) {
+    e.source.frameElement.style.height = e.data.height + "px";
+    if (e.data.width) {
+      e.source.frameElement.style.width = e.data.width + "px";
+    }
+  }
+
+  // Example: other communication
+  if (e.data.type === 'message') {
+    console.log("Parent received:", e.data.msg);
+  }
+});
+</script>
+</body>
+</html>
