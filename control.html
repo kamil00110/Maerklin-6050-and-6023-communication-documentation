@@ -10,32 +10,57 @@
     font-family: sans-serif;
     background: #f0f0f0;
   }
-  #taskbar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 150px;
-    background: #333;
-    display: flex;
-    align-items: center;
-    overflow-x: auto;
-    padding: 5px;
-    box-sizing: border-box;
-  }
-  .unit-frame {
-    width: 300px;
-    height: 140px;
-    margin: 0 5px;
-    border: none;
-    cursor: grab;
-  }
-  button {
+
+  #addUnit {
     position: fixed;
     top: 10px;
     left: 10px;
     padding: 8px 12px;
     font-size: 16px;
+  }
+
+  #taskbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 13cm; /* Taskbar height equals iframe height */
+    background: #333;
+    display: flex;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding: 5px;
+    box-sizing: border-box;
+  }
+
+  .unit-container {
+    position: relative;
+    width: 13cm;
+    height: 13cm;
+    margin: 0 5px;
+    display: flex;
+    flex-direction: column;
+    background: #222;
+    border: 1px solid #555;
+  }
+
+  .drag-handle {
+    height: 20px;
+    background: #555;
+    cursor: grab;
+    color: white;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  .unit-frame {
+    flex: 1;
+    border: none;
+    width: 100%;
+    height: 100%;
   }
 </style>
 </head>
@@ -49,46 +74,59 @@ const taskbar = document.getElementById('taskbar');
 const addBtn = document.getElementById('addUnit');
 
 let dragged = null;
-let offsetX = 0;
+let startX = 0;
+let startLeft = 0;
 
 function createUnit() {
+  const container = document.createElement('div');
+  container.className = 'unit-container';
+
+  const handle = document.createElement('div');
+  handle.className = 'drag-handle';
+  handle.textContent = 'Drag';
+
   const iframe = document.createElement('iframe');
   iframe.src = 'unit.html';
   iframe.className = 'unit-frame';
-  
-  // Enable dragging
-  iframe.addEventListener('pointerdown', (e) => {
-    dragged = iframe;
-    offsetX = e.clientX - iframe.getBoundingClientRect().left;
-    iframe.setPointerCapture(e.pointerId);
+
+  container.appendChild(handle);
+  container.appendChild(iframe);
+  taskbar.appendChild(container);
+
+  // Drag logic
+  handle.addEventListener('pointerdown', (e) => {
+    dragged = container;
+    startX = e.clientX;
+    startLeft = container.offsetLeft;
+    handle.setPointerCapture(e.pointerId);
   });
-  
-  iframe.addEventListener('pointermove', (e) => {
+
+  handle.addEventListener('pointermove', (e) => {
     if (dragged) {
       e.preventDefault();
-      const newX = e.clientX - offsetX - taskbar.getBoundingClientRect().left;
+      const dx = e.clientX - startX;
       dragged.style.position = 'absolute';
-      dragged.style.left = newX + 'px';
+      dragged.style.left = startLeft + dx + 'px';
       dragged.style.top = taskbar.getBoundingClientRect().top + 'px';
       dragged.style.zIndex = 1000;
     }
   });
-  
-  iframe.addEventListener('pointerup', (e) => {
+
+  handle.addEventListener('pointerup', (e) => {
     if (dragged) {
-      // Snap back to taskbar layout
+      // Snap back to taskbar flex layout
       dragged.style.position = 'static';
+      dragged.style.left = '';
+      dragged.style.top = '';
       dragged.style.zIndex = '';
       dragged = null;
     }
   });
-  
-  taskbar.appendChild(iframe);
 }
 
 addBtn.addEventListener('click', createUnit);
 
-// Initial unit
+// Add initial unit
 createUnit();
 </script>
 
