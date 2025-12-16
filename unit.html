@@ -1015,6 +1015,46 @@
                         </div>
 
                     </div>
+					<script>
+
+// Read the "stop" cookie
+function getStopCookie() {
+  const matches = document.cookie.match(/(?:^|; )stop=([^;]*)/);
+  return matches ? matches[1] === "true" : false; // return boolean
+}
+
+// Set the "stop" cookie (true/false)
+function setStopCookie(value) {
+  document.cookie = `stop=${value ? "true" : "false"}; path=/; SameSite=Lax`;
+}
+
+// Watch the "stop" cookie for changes
+function watchStopCookie(callback, interval = 500) {
+  let lastValue = getStopCookie();
+  setInterval(() => {
+    const currentValue = getStopCookie();
+    if (currentValue !== lastValue) {
+      lastValue = currentValue;
+      callback(currentValue);
+    }
+  }, interval);
+}
+
+
+// Watch for changes
+watchStopCookie((newValue) => {
+  console.log("Stop cookie changed to:", newValue);
+  if (newValue) {
+    console.log("Stop is TRUE");
+	turnLEDOff("go");
+  } else {
+    turnLEDOn("go");
+    console.log("Stop is FALSE");
+  }
+});
+
+
+					</script>
                     <script>
                         const numDiv1 = document.getElementById('nrow1');
                         const numDiv2 = document.getElementById('nrow2');
@@ -1399,9 +1439,11 @@
                       addrData.f0 = true;
                       saveAddressData(Address, addrData);
                       console.log(addrData.f0);
-                      LocoAction()
-                      
+                      LocoAction()        
                       }
+					  else{
+					   setStopCookie(false);
+					  }
                       el.className = ledOriginalClass[id]; // restore original CSS
                     }
                     
@@ -1421,6 +1463,9 @@
                       console.log(addrData.f0);
                       LocoAction()
                       }
+					  else{
+					   setStopCookie(true);
+					  }
                       el.className = ''; // remove all CSS
                     }
                 </script>
