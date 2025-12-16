@@ -1,74 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Iframe Auto-Resize Parent-Controlled</title>
-  <style>
-    #container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    iframe {
-      width: 100%;
-      border: 1px solid #ccc;
-      display: block;
-      overflow: hidden; /* hide scrollbars */
-    }
-  </style>
-</head>
-<body>
-<h1>Iframe Auto-Resize Example</h1>
-<div id="container"></div>
+<meta charset="UTF-8">
+<title>Iframe Spawner</title>
 
-<script>
-const container = document.getElementById("container");
-const iframeCount = 5;
-const iframes = [];
-
-// Function to resize an iframe to match its content
-function resizeIframe(iframe) {
-  try {
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
-    const body = doc.body;
-    const html = doc.documentElement;
-
-    const height = Math.max(
-      body.scrollHeight, body.offsetHeight,
-      html.clientHeight, html.scrollHeight, html.offsetHeight
-    );
-    const width = Math.max(
-      body.scrollWidth, body.offsetWidth,
-      html.clientWidth, html.scrollWidth, html.offsetWidth
-    );
-
-    iframe.style.height = height + "px";
-    iframe.style.width = width + "px";
-  } catch (err) {
-    console.warn("Cannot access iframe (cross-origin?)", err);
+<style>
+  #container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
+  iframe {
+    border: 1px solid #ccc;
+    display: block;
+    overflow: hidden;
+  }
+</style>
+
+<script type="application/javascript">
+function resizeIFrameToFitContent(iFrame) {
+    if (!iFrame.contentWindow || !iFrame.contentWindow.document) return;
+
+    const body = iFrame.contentWindow.document.body;
+    const html = iFrame.contentWindow.document.documentElement;
+
+    iFrame.width = Math.max(
+        body.scrollWidth,
+        body.offsetWidth,
+        html.clientWidth,
+        html.scrollWidth,
+        html.offsetWidth
+    );
+
+    iFrame.height = Math.max(
+        body.scrollHeight,
+        body.offsetHeight,
+        html.clientHeight,
+        html.scrollHeight,
+        html.offsetHeight
+    );
 }
 
-// Spawn iframes
-for (let i = 0; i < iframeCount; i++) {
-  const frame = document.createElement("iframe");
-  frame.src = "unit.html";  // MUST be same-origin
-  frame.style.width = "100%";
-  frame.style.border = "1px solid #ccc";
-  frame.style.overflow = "hidden";
-
-  // Resize after content loads
-  frame.addEventListener("load", () => resizeIframe(frame));
-
-  container.appendChild(frame);
-  iframes.push(frame);
+// Resize ALL iframes
+function resizeAllIFrames() {
+    const iframes = document.querySelectorAll("iframe");
+    for (let i = 0; i < iframes.length; i++) {
+        resizeIFrameToFitContent(iframes[i]);
+    }
 }
 
-// Optional: periodically adjust sizes for dynamic content
-setInterval(() => {
-  iframes.forEach(resizeIframe);
-}, 500); // adjust every 0.5s
+window.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("container");
+    const iframeCount = 5;
+
+    for (let i = 0; i < iframeCount; i++) {
+        const iframe = document.createElement("iframe");
+        iframe.src = "unit.html"; // SAME ORIGIN REQUIRED
+        iframe.onload = () => resizeIFrameToFitContent(iframe);
+        container.appendChild(iframe);
+    }
+});
 </script>
+</head>
+
+<body>
+<h1>Iframe Auto-Resize (Parent Controlled)</h1>
+<div id="container"></div>
 </body>
 </html>
 
