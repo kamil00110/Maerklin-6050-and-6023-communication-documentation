@@ -196,4 +196,36 @@ can't recive data when somone uses the 6040 Keybord, Control 80/80f or Control U
 - 225+ even more s88. according to the manual shold stop at 31 but the interface reads up to 61
 
 # I2C Comunication between the modules:
-coming soon
+All the Märklin modules are conected with 32pin conectors. They are split into row A and B only each second pin is populated. each side contains the same Signal and 
+power wires mirrored
+
+## Pinout male keyboard side:
+A2-A16: GND
+B2-B4: 8V
+B6: INIT
+-does something to the to 80f modules (only module that uses it. No activity seen)
+B8: 5V for Memory
+-5v power for Memory and Keyboard modules (NC no existing Control Unit gives power to it)
+B10: Stop 
+-High=Stop. If pulled down Stop button is pressed
+B12: Go
+-High=Go . If pulled down Go button is pressed
+B14: SCL
+-I2C clock
+B16: SDA
+-I2C data
+
+## Comunication:
+All the module work in a I2C multi master system toogether. Comunicating directly on the bus allows to remove some limitatiosn of other märklin hardware like
+controlling the full 127 addresses on the 6027,6029 and 6030. (possibly 255 on 6021 untested). Sending a special resume command. manipulating the functions 
+on a 80f while the address is in use
+
+## I2C addresses:
+(can depend on CU version)
+
+-7F:
+command every module sends to the CU
+
+details coming soon
+
+
