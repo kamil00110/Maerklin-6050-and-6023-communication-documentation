@@ -200,20 +200,20 @@ All the Märklin modules are conected with 32pin conectors. They are split into 
 power wires mirrored
 
 ## Pinout male keyboard side:
-A2-A16: GND
-B2-B4: 8V
-B6: INIT
--does something to the to 80f modules (only module that uses it. No activity seen)
-B8: 5V for Memory
--5v power for Memory and Keyboard modules (NC no existing Control Unit gives power to it)
-B10: Stop 
--High=Stop. If pulled down Stop button is pressed
-B12: Go
--High=Go . If pulled down Go button is pressed
-B14: SCL
--I2C clock
-B16: SDA
--I2C data
+- A2-A16: GND
+- B2-B4: 8V
+- B6: INIT
+  - does something to the to 80f modules (only module that uses it. No activity seen)
+- B8: 5V for Memory
+  - 5v power for Memory and Keyboard modules (NC no existing Control Unit gives power to it)
+- B10: Stop 
+  - High=Stop. If pulled down Stop button is pressed
+- B12: Go
+  - High=Go . If pulled down Go button is pressed
+- B14: SCL
+  - I2C clock
+- B16: SDA
+  - I2C data
 
 ## Comunication:
 All the module work in a I2C multi master system toogether. Comunicating directly on the bus allows to remove some limitatiosn of other märklin hardware like
@@ -223,8 +223,8 @@ on a 80f while the address is in use
 ## I2C addresses:
 (can depend on CU version)
 
--7F:
-command every module sends to the CU
+- 7F:
+  - command every module sends to the CU
 
 details coming soon
 
