@@ -1099,7 +1099,7 @@
 
         // clean close from the running page, right away (safe even while Chrome still waits for
         // data): stop reading, let go of the writer, close the port. The state stays 'closing'
-        // until Chrome has really closed it: no new open, no forget and the tab keeps the port.
+        // until Chrome has really closed it: no new open meanwhile and the tab keeps the port.
         async function disconnectPort() {
             if (state !== 'open') return;
             state = 'closing';
@@ -1174,11 +1174,8 @@
             }
             manualOff = false;
             if (state !== 'idle') return notice('busy');
-            // this is the PC now: forget other remembered ports (all closed here), so auto connect
-            // tries only this one
-            for (const other of await navigator.serial.getPorts()) {
-                if (other !== p && other.forget) other.forget().catch(() => {});
-            }
+            // this is the PC now: auto connect tries it first. (Other remembered ports are not
+            // forgotten: Chrome can list a PC twice, forgetting one also forgets the chosen one.)
             retryCount = 0;
             lastPort = p;
             connectPort(p);
