@@ -4,6 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <title>3D Content Frame</title>
+    <script>
+        // Embedded in control.html: no background, no scrollbars, control.html keeps the loco data
+        const EMBEDDED = window.self !== window.top;
+        if (EMBEDDED) document.documentElement.classList.add('embedded');
+    </script>
 
     <style>
         body {
@@ -11,8 +16,21 @@
             justify-content:center;
             align-items:center;
             height:100vh;
+            margin:0;
             background:lightgray;
             font-family:Arial, sans-serif;
+        }
+        html.embedded, html.embedded body {
+            background:transparent;
+            overflow:hidden;
+        }
+        html.embedded .frame {
+            width:auto;
+            height:auto;
+        }
+        html.embedded .outer-frame {
+            /* the outer shadow would be cut off by the iframe, control.html draws it instead */
+            box-shadow: inset 0 0 3mm rgba(0,0,0,0.25);
         }
         .image{
            user-select: none;
@@ -166,6 +184,13 @@
         .knob:active {
       background: #960800;
     }
+        /* speed knob: grab hand, closed hand while turning (also outside the knob) */
+        .knob {
+            cursor: grab;
+        }
+        html.knob-turning, html.knob-turning * {
+            cursor: grabbing !important;
+        }
     
         .stopgo{
            position:absolute;
@@ -589,6 +614,10 @@
         .bolt.tr { top:5mm; right:5mm; }
         .bolt.bl { bottom:5mm; left:5mm; }
         .bolt.br { bottom:5mm; right:5mm; }
+        /* all buttons: pointer cursor */
+        .rButton, .gButton {
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -755,11 +784,13 @@
                             cy = rect.top + rect.height/2;
                         
                             dragging=true;
+                            document.documentElement.classList.add("knob-turning");
                             lastMouseAngle = getMouseAngle(e);
                             inSpecialDrag = (angle === START_SPECIAL);
                             if (!speedTimer) {
         speedTimer = setInterval(() => {
             console.log("Speed:", getSpeed());
+            if (window.Address === undefined) return; // no loco selected
             let addrData = loadAddressData(Address);
                       addrData.speed = getSpeed();
                       saveAddressData(Address, addrData);
@@ -771,9 +802,17 @@
                         document.addEventListener("mouseup", ()=>{
                             if(dragging){
                                 dragging=false;
+                                document.documentElement.classList.remove("knob-turning");
                                 if (speedTimer) {
             clearInterval(speedTimer);
             speedTimer = null;
+            // the timer saves only every 200ms, save the speed where the knob was let go
+            if (window.Address !== undefined) {
+                let addrData = loadAddressData(Address);
+                addrData.speed = getSpeed();
+                saveAddressData(Address, addrData);
+                LocoAction()
+            }
         }
                                 if(inSpecialDrag){
                                     if(angle <= SPECIAL_MIN){
@@ -845,29 +884,32 @@
                             });
                         });
                         
-                        // Initialize LEDs: first LED turns on
+                        // Initialize LEDs: show the stored direction of the selected loco
+                        // (used to always switch to "up", so pressing an f button reset the direction)
                         function initializeLEDs() {
                             const led1 = document.getElementById(led1Id);
                             const led2 = document.getElementById(led2Id);
                             if (!led1 || !led2) return console.warn('LED not found');
-                        
-                            // Turn on the first LED
-                            led1.className = led1.dataset.originalClass;
-                            led1.setAttribute('style', led1.dataset.originalStyle);
-                        
-                            // Ensure second LED stays off
-                            led2.className = '';
-                            led2.style.width = '0px';
-                            led2.style.height = '0px';
-                            led2.style.margin = '0px';
-                        
-                            activeLED = 1;
+
                             ledsInitialized = true;
+                            const addrData = window.Address !== undefined ? loadAddressData(Address) : null;
+                            if (addrData && addrData.dir) {
+                                forceDown();
+                            } else {
+                                forceUp();
+                            }
+                            // the f LEDs show the functions of this loco (not the ones of a loco selected before)
+                            if (addrData) {
+                                UNIT_LEDS.forEach(id => {
+                                    document.getElementById(id).className = addrData[id] ? rememberLED(id) : '';
+                                });
+                            }
                         }
                         
                         // Toggle LEDs between them
                         function toggleLEDs() {
                             if (!ledsInitialized) return console.warn('LEDs not initialized. Call initializeLEDs first.');
+                            if (window.Address === undefined) return; // no loco selected
                         
                             const led1 = document.getElementById(led1Id);
                             const led2 = document.getElementById(led2Id);
@@ -1025,7 +1067,20 @@ function getStopCookie() {
 
 // Set the "stop" cookie (true/false)
 function setStopCookie(value) {
+  if (EMBEDDED) {
+    // control.html keeps the stop state and passes it on to all units
+    window.parent.postMessage({ type: 'marklin-unit', action: 'stop', value: !!value }, '*');
+    return;
+  }
   document.cookie = `stop=${value ? "true" : "false"}; path=/; SameSite=Lax`;
+}
+
+function applyStop(value) {
+  if (value) {
+    turnLEDOff("go");
+  } else {
+    turnLEDOn("go");
+  }
 }
 
 // Watch the "stop" cookie for changes
@@ -1068,6 +1123,7 @@ watchStopCookie((newValue) => {
 						    let addrBuffer = loadAddressData(buffer[0]+buffer[1]);
 							addrBuffer.used = false;
 							saveAddressData(buffer[0]+buffer[1], addrBuffer); 
+							window.Address = undefined; // released, no loco selected until the new address is complete
                             buffer = [nr];
                           }
                         
@@ -1077,9 +1133,10 @@ watchStopCookie((newValue) => {
                           if (buffer.length === 2) {
 						    if(addrBuffer.used==false){
 							  console.log(buffer[0]+buffer[1]+" is avivable")
-                              onTwoNumbersFilled(buffer[0], buffer[1]);
+							  // mark as used first, onTwoNumbersFilled saves newer data (speed) that must not be overwritten
 							  addrBuffer.used = true;
 							  saveAddressData(buffer[0]+buffer[1], addrBuffer); 
+                              onTwoNumbersFilled(buffer[0], buffer[1]);
 							}
 							else{
 							  console.log(buffer[0]+buffer[1]+" is in use")
@@ -1282,43 +1339,69 @@ watchStopCookie((newValue) => {
                     }
                 }
                 
-                // Main function:
-                // Loads cookie or creates one with defaults
-                function loadAddressData(address) {
-                    const cookieName = `addr_${address}`;
-                    let data = getCookie(cookieName);
-                
-                    if (data) {
-                        // cookie exists → decode it
-                        const parsed = decodeData(data);
-                        if (parsed) {
-                            return parsed;   // return loaded values
-                        }
-                    }
-                
-                    // cookie does NOT exist → create default data
-                    const defaultData = {
+                // Loco data of every address.
+                // Always kept in memory: cookies do not work when the page is opened as a file (file://),
+                // that made every read return the default data (direction reset, nothing changed).
+                // Standalone: also saved in cookies like before.
+                // Embedded in control.html: control.html keeps the data of all units and sends it here.
+                const addressCache = {};
+
+                function defaultAddressData() {
+                    return {
                         speed: 0,
-                        direction: false,
+                        dir: false,
                         f0: false,
                         f1: false,
                         f2: false,
                         f3: false,
                         f4: false,
-						used: false,
+                        used: false,
                     };
-                
-                    // write cookie
-                    setCookie(cookieName, encodeData(defaultData));
-                
-                    return defaultData;
+                }
+
+                // Main function: returns the data of an address (defaults if there is none yet)
+                function loadAddressData(address) {
+                    if (!EMBEDDED) {
+                        const parsed = decodeData(getCookie(`addr_${address}`));
+                        if (parsed) {
+                            return Object.assign(defaultAddressData(), parsed);
+                        }
+                    }
+                    return Object.assign(defaultAddressData(), addressCache[address]);
                 }
                 
-                // Save updated values back to cookie
+                // Save updated values
                 function saveAddressData(address, dataObj) {
-                    const cookieName = `addr_${address}`;
-                    setCookie(cookieName, encodeData(dataObj));
+                    addressCache[address] = Object.assign({}, dataObj);
+                    if (EMBEDDED) {
+                        window.parent.postMessage({ type: "marklin-unit", action: "save", address: String(address), data: dataObj }, "*");
+                    } else {
+                        setCookie(`addr_${address}`, encodeData(dataObj));
+                    }
                 }
+
+                // Messages from control.html
+                window.addEventListener("message", e => {
+                    if (!EMBEDDED || e.source !== window.parent || !e.data) return;
+                    const msg = e.data;
+                    if (msg.type === "marklin-store") {
+                        // all addresses (+ the saved state of this unit), sent when this unit is loaded
+                        Object.keys(addressCache).forEach(a => delete addressCache[a]);
+                        Object.assign(addressCache, msg.store);
+                        applyStop(msg.stopped);
+                        if (msg.unitState) setUnitState(msg.unitState);
+                        unitStateRestored = true;
+                        reportUnitState();
+                    } else if (msg.type === "marklin-address") {
+                        // another unit changed an address
+                        addressCache[msg.address] = msg.data;
+                    } else if (msg.type === "marklin-stop") {
+                        applyStop(msg.value);
+                    } else if (msg.type === "marklin-remote") {
+                        // a button of the TV remote (see control.html)
+                        remoteCommand(msg);
+                    }
+                });
                 </script>
                 <script>
                     var originalClass = {}; // store original CSS class for each LED
@@ -1361,6 +1444,7 @@ watchStopCookie((newValue) => {
                     function toggleLED(id) {
                         const el = document.getElementById(id);
                         if (!el) return console.warn(`LED ${id} not found`);
+                        if (window.Address === undefined) return; // no loco selected
                     
                         // save original class if not saved yet
                         if (!(id in ledClasses)) {
@@ -1434,6 +1518,7 @@ watchStopCookie((newValue) => {
                         ledOriginalClass[id] = el.className || '';
                       }
                       if(id=="f0"){
+                      if (window.Address === undefined) return; // no loco selected (the go LED still works)
                       console.log(Address);  
                       let addrData = loadAddressData(Address);
                       addrData.f0 = true;
@@ -1456,6 +1541,7 @@ watchStopCookie((newValue) => {
                         ledOriginalClass[id] = el.className || '';
                       }
                       if(id=="f0"){
+                      if (window.Address === undefined) return; // no loco selected (the go LED still works)
                       console.log(Address);
                       let addrData = loadAddressData(Address);
                       addrData.f0 = false;
@@ -1480,6 +1566,157 @@ watchStopCookie((newValue) => {
                        console.log("f2="+addrData.f2);
                        console.log("f3="+addrData.f3);
                        console.log("f4="+addrData.f4);
+                    }
+                </script>
+                <script>
+                    // ---- State of this unit, control.html saves it and gives it back after a reload ----
+                    const UNIT_LEDS = ['f0', 'f1', 'f2', 'f3', 'f4'];
+
+                    function isLit(id) {
+                        return document.getElementById(id).className !== '';
+                    }
+
+                    function getUnitState() {
+                        const leds = {};
+                        UNIT_LEDS.forEach(id => { leds[id] = isLit(id); });
+                        let mode = null; // null = start state, L and F LED both lit
+                        if (isLit('LLED') && !isLit('FLED')) mode = 'L';
+                        if (isLit('FLED') && !isLit('LLED')) mode = 'F';
+                        return {
+                            digits: buffer.slice(),
+                            knob: Math.round(Math.max(ROT_MIN, Math.min(ROT_MAX, angle)) * 10) / 10,
+                            mode: mode,
+                            arrow: ledsInitialized ? (activeLED === 2 ? 'down' : 'up') : null,
+                            leds: leds,
+                        };
+                    }
+
+                    // The LED helpers above remember the "on" class of an LED the first time they touch it.
+                    // Remember it for all of them before an LED is switched here.
+                    function rememberLED(id) {
+                        const el = document.getElementById(id);
+                        const onClass = ledClasses[id] || ledOriginalClass[id] || originalClass[id] || el.className || 'LED';
+                        if (!(id in ledClasses)) ledClasses[id] = onClass;
+                        if (!(id in ledOriginalClass)) ledOriginalClass[id] = onClass;
+                        if (!(id in originalClass)) originalClass[id] = onClass;
+                        return onClass;
+                    }
+
+                    // Show a saved state (only the display, nothing is sent to the loco)
+                    function setUnitState(s) {
+                        ['LLED', 'FLED'].concat(UNIT_LEDS).forEach(rememberLED);
+
+                        angle = s.knob;
+                        updateKnob();
+
+                        if (s.mode === 'L') selectLED('LLED', 'FLED');
+                        if (s.mode === 'F') selectLED('FLED', 'LLED');
+
+                        buffer = s.digits.slice();
+                        numDiv1.textContent = buffer[0] ?? '';
+                        numDiv2.textContent = buffer[1] ?? '';
+                        window.Address = buffer.length === 2 ? buffer[0] + buffer[1] : undefined;
+
+                        if (s.arrow) {
+                            ledsInitialized = true;
+                            if (s.arrow === 'down') forceDown(); else forceUp();
+                        } else {
+                            uninitializeLEDs();
+                        }
+
+                        UNIT_LEDS.forEach(id => {
+                            document.getElementById(id).className = s.leds[id] ? rememberLED(id) : '';
+                        });
+                    }
+
+                    // Send the state to control.html when it changed
+                    let unitStateRestored = false; // not before the saved state was shown
+                    let lastUnitState = '';
+                    function reportUnitState() {
+                        if (!EMBEDDED || !unitStateRestored) return;
+                        const state = getUnitState();
+                        const json = JSON.stringify(state);
+                        if (json === lastUnitState) return;
+                        lastUnitState = json;
+                        window.parent.postMessage({ type: 'marklin-unit', action: 'state', state: state }, '*');
+                    }
+
+                    // remember the "on" class of the LEDs now: the duplicate isLEDOn above would otherwise take
+                    // the class of the moment it is first asked (F mode would count as L mode)
+                    ['LLED', 'FLED'].concat(UNIT_LEDS).forEach(rememberLED);
+
+                    // ---- TV remote: control.html sends the buttons of a phone remote ----
+                    function frowButton(i) {
+                        return document.querySelectorAll('.frow2 div')[i]; // f1, f2, off, stop, f3, f4, function, go
+                    }
+
+                    function speedAngle(speed) {
+                        return ROT_MIN + speed / 14 * (ROT_MAX - ROT_MIN);
+                    }
+
+                    // like turning the knob to this speed step
+                    function setKnobSpeed(speed) {
+                        speed = Math.max(0, Math.min(14, speed));
+                        angle = speedAngle(speed);
+                        updateKnob();
+                        if (window.Address !== undefined) {
+                            let addrData = loadAddressData(Address);
+                            addrData.speed = speed;
+                            saveAddressData(Address, addrData);
+                            LocoAction()
+                        }
+                    }
+
+                    // select an address as if both digits were typed
+                    function selectAddressDirect(address) {
+                        if (buffer.length === 1) buffer = []; // a half typed address is dropped
+                        selAddress(address[0]);              // releases the loco selected before
+                        // the knob takes the speed the loco already has (instead of giving it the knob's speed)
+                        angle = speedAngle(loadAddressData(address).speed);
+                        updateKnob();
+                        selAddress(address[1]);
+                    }
+
+                    // previous / next loco address (01-80), skipping the ones other units have
+                    function stepAddress(delta) {
+                        let n = window.Address !== undefined ? Number(window.Address) : (delta > 0 ? 0 : 81);
+                        for (let i = 0; i < 80; i++) {
+                            n += delta;
+                            if (n > 80) n = 1;
+                            if (n < 1) n = 80;
+                            const address = String(n).padStart(2, '0');
+                            if (address === window.Address) return;
+                            if (!loadAddressData(address).used) {
+                                selectAddressDirect(address);
+                                return;
+                            }
+                        }
+                    }
+
+                    function remoteCommand(msg) {
+                        if (msg.action === 'speed') {
+                            setKnobSpeed(getSpeed() + (Number(msg.delta) || 0));
+                        } else if (msg.action === 'direction') {
+                            if (window.Address === undefined) return;
+                            // like turning the knob past 0: stop, then change the direction
+                            setKnobSpeed(0);
+                            if (!ledsInitialized) document.querySelectorAll('.asrow2 .rButton')[0].click(); // L
+                            toggleLEDs();
+                        } else if (msg.action === 'address') {
+                            stepAddress(Number(msg.delta) > 0 ? 1 : -1);
+                        } else if (msg.action === 'digit' && /^d$/.test(String(msg.digit))) {
+                            selAddress(String(msg.digit));
+                        } else if (msg.action === 'function') {
+                            if (msg.f === 'f0') frowButton(isLit('f0') ? 2 : 6).click(); // off / function
+                            else if ({ f1: 0, f2: 1, f3: 4, f4: 5 }[msg.f] !== undefined) frowButton({ f1: 0, f2: 1, f3: 4, f4: 5 }[msg.f]).click();
+                        }
+                        reportUnitState();
+                    }
+
+                    if (EMBEDDED) {
+                        setInterval(reportUnitState, 250); // knob turning, spring back, ...
+                        document.addEventListener('click', () => setTimeout(reportUnitState));
+                        document.addEventListener('mouseup', () => setTimeout(reportUnitState));
                     }
                 </script>
 

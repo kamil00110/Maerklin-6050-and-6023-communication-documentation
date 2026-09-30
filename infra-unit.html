@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Infra Control 80f</title>
+    <script>
+        // shown inside control.html: that page draws the outer shadow
+        const EMBEDDED = window.self !== window.top;
+        if (EMBEDDED) document.documentElement.classList.add('embedded');
+    </script>
+
+    <style>
+        body {
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            margin:0;
+            background:lightgray;
+            font-family:Arial, sans-serif;
+        }
+        html.embedded, html.embedded body {
+            background:transparent;
+            overflow:hidden;
+        }
+        html.embedded .frame {
+            width:auto;
+            height:auto;
+        }
+        html.embedded .outer-frame {
+            /* the outer shadow would be cut off by the iframe, control.html draws it instead */
+            box-shadow: inset 0 0 3mm rgba(0,0,0,0.25);
+        }
+        
+        
+        .image4{
+           user-select: none;
+           user-drag: none;
+           position:absolute;
+		   //background-color: green;
+           rotate: 90deg;
+           width: 0.5cm;
+           z-index:600;
+           top:-0.95cm;
+           right: 2.2cm;
+        }
+        .image5{
+           user-select: none;
+           user-drag: none;
+           position:absolute;
+           rotate: -90deg;
+           width: 0.5cm;
+           z-index:600;
+           bottom: -0.95cm;
+           right: 2.2cm;
+           
+           
+        }
+
+        .LED{
+            width:4mm;
+            height: 4mm;
+            position:absolute;
+            background:red;
+            border-radius:50%;
+            margin:2px;
+			z-index:1000;
+    
+            /* Rounded head sticking out 1mm */
+            box-shadow:
+                0 0mm 3mm rgba(255,0,0,1),
+                inset 0 0mm 1.2mm rgba(0,0,0,1.25);
+        }
+		.LEDcon{
+            width:5.5mm;
+            height: 6mm;
+            position:relative;
+            
+			
+        }
+        .narrow{
+        margin-left:0.7mm;
+        width:4mm;
+        //background:orange;
+         z-index:101;
+         justify-content: center;
+         display:flex;
+         white-space: nowrap;
+         
+        }
+        .rButton:active{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #960800;
+        float: left; 
+        box-shadow:
+                
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .rButton{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        min-width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: red;
+        float: left; 
+        box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.65);
+        }
+        
+        
+        
+        
+        .gButton:active{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #004a14;
+        float: left; 
+        box-shadow:
+                
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .gButton{
+        position:relative;
+        top:1mm;
+        width:5.5mm;
+        min-width:5.5mm;
+        height:3mm;
+        border-radius:0.5mm;
+        background: #008f1d;
+        float: left; 
+        box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.55);
+        }
+        
+        .address{
+        user-select: none;
+           user-drag: none;
+         margin-left:1.3mm;
+         margin-right:1.3mm;
+         float: left;
+         color:white;
+         z-index:200;
+        }
+		.lock{
+        user-select: none;
+           user-drag: none;
+         margin-left:0mm;
+         margin-right:4mm;
+         float: left;
+         color:white;
+         z-index:200;
+        }
+		.function{
+        user-select: none;
+           user-drag: none;
+         margin-left:1.3mm;
+         margin-right:1.3mm;
+         float: left;
+         color:white;
+         z-index:200;
+        }
+        
+        .addrF{
+         position: absolute;
+         left:7mm;
+         top:2.8cm;
+         width: 3.2cm;
+         height:4.7cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .keys{
+         position: absolute;
+         right:7mm;
+         bottom:1.1cm;
+         width: 9.5cm;
+         height:5.0cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .func{
+         position: absolute;
+         right:7mm;
+         top:2.8cm;
+         width: 4.3cm;
+         height:2.35cm;
+         //background-color:lime;
+         z-index:100;
+         
+        }
+        .locoD{
+         position: absolute;
+         left:1.1cm;
+         top:30px;
+         width: 3.9cm;
+         height:1.2cm;
+         background-color:#000b1c;
+         z-index:100;
+         
+        }
+        .keyboardD{
+         position: absolute;
+         left:1.1cm;
+         top:30px;
+         width: 2.0cm;
+         height:1.2cm;
+         background-color:black;
+         z-index:100;
+         border-radius:1mm;
+         border: 2px inset rgba(100,100,100,0.65)
+         
+         
+        }
+        .asrow1{
+         gap: 7.8mm;
+         display:flex;
+         white-space: nowrap;
+         width: 3.2cm;
+         height:6mm;
+         //background-color:yellow;
+         z-index:101;
+        
+        }
+        
+        .asrow2{
+         gap: 7.0mm; 
+         overflow: visable; 
+         display:flex;
+         white-space: nowrap;
+         width: 3.2cm;
+         height:6mm;
+         //background-color:purple;
+         z-index:101;
+      
+        
+        }
+        .frow1{
+         gap: 7.8mm;
+         display:flex;
+         white-space: nowrap;
+         width: 4.7cm;
+         height:6mm;
+         //background-color:yellow;
+         z-index:101;
+         
+        
+        }
+        
+        .frow2{
+         gap: 7.0mm; 
+         overflow: visable; 
+         display:flex;
+         white-space: nowrap;
+         width: 4.7cm;
+         height:6mm;
+         //background-color:purple;
+         z-index:101;
+      
+        }
+        .arow1{
+        
+         width: 3.2cm;
+         height:1.2cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px;
+        
+        }
+                    
+        .LEDrow{
+         gap: 8.1mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+        .REDrow{
+         gap: 7.3mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101; 
+        }
+        .Addressrow{
+         
+         gap: 8.1mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+        .GREENrow{
+         gap: 7.3mm;
+         display:flex;
+         white-space: nowrap;
+         width: 100%;
+         height:12.5%;
+         //background-color:red;
+         z-index:101;
+        }
+    
+        
+        .sevensegment{
+        user-select: none;
+           user-drag: none;
+        padding-left:3px;
+        letter-spacing: -2px;
+         color: red;
+         line-height: 0.95;
+          font-family: "seven segment";
+          font-style: italic;
+         text-shadow: 0 0 0 transparent; 
+         font-size: 1.2cm;
+         font-weight: 800;
+           transform: scaleX(1.2);
+      filter:
+        
+        drop-shadow(0px 0px 2px rgba(255,0,0,1.5));
+          
+        
+        }
+        .sevensegment-key{
+        user-select: none;
+           user-drag: none;
+        padding-left:3px;
+        letter-spacing: -2px;
+         color: white;
+         line-height: 0.95;
+          font-family: "seven segment";
+          font-style: italic;
+         font-size: 1.2cm;
+         font-weight: 500;
+           transform: scaleX(1.2);
+        
+        }
+        
+        .nrow1{
+        
+         text-align: left;
+         width: 9.5mm;
+         height:1.1cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px;
+        
+        }
+    
+        
+        .arrow{
+        user-select: none;
+           user-drag: none;
+         width: 1.2cm;
+         height:1.1cm;
+         //background-color:red;
+         z-index:101;
+         float: left;
+         margin-top: 1.5px
+        }
+        
+        .frame{
+        user-select: none;
+           user-drag: none;
+        width: 450px;
+        height:450px;
+        display: table-cell;
+        transform: scale(1);
+        }
+    
+        /* Outer white rectangle */
+       
+        .outer-frame { 
+        user-select: none;
+           user-drag: none;
+            width:11.8cm;
+            height:11.8cm;
+            background:#ffffff;
+            border-radius:4mm 4mm 7mm 7mm;
+            position:relative;
+    
+            /* subtle shading + structure */
+            box-shadow:
+                0 2mm 4mm rgba(0,0,0,0.25),
+                inset 0 0 3mm rgba(0,0,0,0.25);
+                
+        }
+        .underscore{
+        user-select: none;
+           user-drag: none;
+           font-family:Consolas;
+           font-size:7.5px;
+           position: relative;
+           top:-0.9px;
+           padding:1px;
+        }
+    
+        /* Editable text area*/
+        .label{
+        user-select: none;
+           user-drag: none;
+            position:absolute;
+            left:6mm;
+            bottom:2mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            
+            font-size:12pt;
+            font-family:"Starch Slab",Courier New, arial;
+           
+            
+        }
+        .label2{
+        user-select: none;
+           user-drag: none;
+           color: white;
+           position:absolute;
+            right:10mm;
+            top:3mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            
+            font-size:17pt;
+            font-family:"Marklin","Courier New", arial;
+            font-weight: 900;
+           z-index:1;
+            
+        }
+        .label3{
+        user-select: none;
+           user-drag: none;
+           color: white;
+           position:absolute;
+            right:10mm;
+            top:13mm;           /* correct padding now */
+            width:4cm;
+            height:0.4cm;
+            font-size:6pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+            
+        }
+    
+        /* Inner black lifted frame */
+        .inner-frame {
+        user-select: none;
+           user-drag: none;
+            width:10.9cm;
+            height:8.9cm;
+            background:#000;
+            border-radius:3mm 3mm 5mm 5mm;
+            position:absolute;
+            left:50%;
+            transform:translateX(-50%);
+            top:0mm; /* still touching top */
+            
+            /* Raised 3mm above plate using shadow height simulation */
+            box-shadow:
+                0 3mm 5mm rgba(0,0,0,0.35),
+                inset 0 0 6mm rgba(150,150,150,1.95);
+        }
+    
+        /* Bolts */
+        .bolt {
+        user-select: none;
+           user-drag: none;
+            width:4mm;
+            height:4mm;
+            position:absolute;
+            background:#222;
+            border-radius:50%;
+    
+            /* Rounded head sticking out 1mm */
+            box-shadow:
+                0 1mm 2mm rgba(0,0,0,0.35),
+                inset 0 0.6mm 1.2mm rgba(255,255,255,0.25);
+        }
+    
+        /* Bolt positions (always 5mm inside black frame edges) */
+        .bolt.tl { top:5mm; left:5mm; }
+        .bolt.tr { top:5mm; right:5mm; }
+        .bolt.bl { bottom:5mm; left:5mm; }
+        .bolt.br { bottom:5mm; right:5mm; }
+        /* all buttons: pointer cursor */
+        .rButton, .gButton {
+            cursor: pointer;
+        }
+        /* like on the Control 80f: an LED or arrow that is off is not there at all */
+        .LED.off, svg.off {
+            visibility: hidden;
+        }
+    </style>
+</head>
+
+<body>
+     <div class="frame">
+        <div class="outer-frame">
+
+            <div class=""></div>
+            <p class="label">infra control 80f</p>
+            <p class="label2">märklin</p>
+            <p class="label3">DIGITAL<span class="underscore">_________</span>H0</p>
+            <div class="inner-frame">
+      
+                
+                <!-- remote number, direction arrows, loco address -->
+                <div class="locoD">
+                    <div class="nrow1">
+                        <div class="sevensegment" id="remote"></div>
+                    </div>
+                    <div class="nrow1">
+                        <div class="sevensegment" ></div>
+                    </div>
+					<div class="nrow1">
+                        <div class="sevensegment" id="digit1"></div>
+                    </div>
+					<div class="nrow1">
+                        <div class="sevensegment" id="digit2"></div>
+                    </div>
+                    <div class="arrow">
+                        <div>
+                            <svg id="up" class="image4 off" width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+
+                                <defs>
+                                    <filter id="shadowFilter" x="-50%" y="-50%" width="400%" height="800%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="red" flood-opacity="1.7" />
+                                    </filter>
+                                </defs>
+
+                                <path filter="url(#shadowFilter)" d="M20,50 Q20,48 22,48 L180,10 
+           Q182,10 182,12 L182,88 
+           Q182,90 180,90 L22,52 
+           Q20,52 20,50 Z" fill="red" />
+                            </svg>
+
+                        </div>
+                        <div>
+                            <svg id="down" class="image5 off" width="200" height="100" viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+
+                                <defs>
+                                    <filter id="shadowFilter" x="-50%" y="-50%" width="400%" height="800%">
+                                        <feDropShadow dx="0" dy="0" stdDeviation="30" flood-color="red" flood-opacity="1.7" />
+                                    </filter>
+                                </defs>
+
+                                <path filter="url(#shadowFilter)" d="M20,50 Q20,48 22,48 L180,10 
+           Q182,10 182,12 L182,88 
+           Q182,90 180,90 L22,52 
+           Q20,52 20,50 Z" fill="red" />
+                            </svg>
+
+                        </div>
+
+                    </div>
+	
+                </div>
+                <div class="addrF">
+                    <div class="arow1">
+                        <div class="asrow1">
+                            <div class="lock">lock</div>    
+                            <div class="function">function</div>
+                        </div>
+                        <div class="asrow2">
+                            <div class="LEDcon"><div id="lock" class="LED off"></div></div>
+							<div class="LEDcon"></div>
+							<div class="LEDcon"><div id="f0" class="LED off"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="func">
+                    <div class="arow1">
+                        <div class="frow1">
+                            <div class="narrow">
+                                <div class="address">f1</div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">f2</div> 
+                            </div>
+                            <div class="narrow">
+                                <div class="address">f3</div>
+                            </div>
+                            <div class="narrow">
+                                <div class="address">f4</div>
+                            </div>
+                        </div>
+                        <div class="frow2">
+						    <div class="LEDcon"><div id="f1" class="LED off"></div></div>
+							<div class="LEDcon"><div id="f2" class="LED off"></div></div>
+							<div class="LEDcon"><div id="f3" class="LED off"></div></div>
+							<div class="LEDcon"><div id="f4" class="LED off"></div></div>
+                        </div>
+                    </div>
+
+                </div>
+       
+                <div>
+                    <div class="bolt tl"></div>
+                    <div class="bolt tr"></div>
+                    <div class="bolt bl"></div>
+                    <div class="bolt br"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Infra Control 80f: shows what the last command of a phone remote did. control.html receives
+        // the remotes (Bluetooth serial port) and sends {remote 1-4, typed address digits, dir
+        // (null = no loco), functions f0-f4, connected, text}. The lock LED glows while a remote
+        // is connected.
+        const $ = id => document.getElementById(id);
+
+        function show(s) {
+            $('lock').classList.toggle('off', !s.connected);
+            $('remote').textContent = s.remote || '';
+            $('digit1').textContent = s.digits[0] || '';
+            $('digit2').textContent = s.digits[1] || '';
+            $('up').classList.toggle('off', s.dir !== false);
+            $('down').classList.toggle('off', s.dir !== true);
+            s.functions.forEach((on, i) => $('f' + i).classList.toggle('off', !on));
+        }
+
+        window.addEventListener('message', e => {
+            if (!EMBEDDED || e.source !== window.parent || !e.data || e.data.type !== 'marklin-infra') return;
+            show(e.data);
+            if (e.data.text) console.log(e.data.text);
+        });
+    </script>
+</body>
+
+</html>

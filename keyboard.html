@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Keyboard</title>
+    <script>
+        // Embedded in control.html: no background, no scrollbars, control.html keeps the switch states
+        const EMBEDDED = window.self !== window.top;
+        if (EMBEDDED) document.documentElement.classList.add('embedded');
+    </script>
+
+    <style>
+        body {
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            margin:0;
+            background:lightgray;
+            font-family:Arial, sans-serif;
+        }
+        html.embedded, html.embedded body {
+            background:transparent;
+            overflow:hidden;
+        }
+        html.embedded .frame {
+            width:auto;
+            height:auto;
+        }
+        html.embedded .outer-frame {
+            /* the outer shadow would be cut off by the iframe, control.html draws it instead */
+            box-shadow: inset 0 0 3mm rgba(0,0,0,0.25);
+        }
+
+        .LED{
+            width:4mm;
+            height: 4mm;
+            position:absolute;
+            background:red;
+            border-radius:50%;
+            margin:2px;
+            box-shadow:
+                0 0mm 3mm rgba(255,0,0,1),
+                inset 0 0mm 1.2mm rgba(0,0,0,1.25);
+        }
+        .narrow{
+            margin-left:0.7mm;
+            width:4mm;
+            z-index:101;
+            justify-content: center;
+            display:flex;
+            white-space: nowrap;
+        }
+        .rButton{
+            position:relative;
+            top:1mm;
+            width:5.5mm;
+            min-width:5.5mm;
+            height:3mm;
+            border-radius:0.5mm;
+            background: red;
+            float: left;
+            cursor: pointer;
+            box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.65);
+        }
+        .rButton:active{
+            background: #960800;
+            box-shadow: inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .gButton{
+            position:relative;
+            top:1mm;
+            width:5.5mm;
+            min-width:5.5mm;
+            height:3mm;
+            border-radius:0.5mm;
+            background: #008f1d;
+            float: left;
+            cursor: pointer;
+            box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 1mm rgba(0,0,0,0.55);
+        }
+        .gButton:active{
+            background: #004a14;
+            box-shadow: inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .address{
+            user-select: none;
+            margin-left:1.3mm;
+            margin-right:1.3mm;
+            float: left;
+            color:white;
+            z-index:200;
+        }
+        .keys{
+            position: absolute;
+            right:7mm;
+            bottom:1.1cm;
+            width: 9.5cm;
+            height:5.0cm;
+            z-index:100;
+        }
+        .keyboardD{
+            position: absolute;
+            left:1.1cm;
+            top:30px;
+            width: 2.0cm;
+            height:1.2cm;
+            background-color:black;
+            z-index:100;
+            border-radius:1mm;
+            border: 2px inset rgba(100,100,100,0.65);
+            cursor: pointer;
+            overflow: hidden;
+            transition: width 0.18s ease;
+        }
+        .keyboardD:focus-visible {
+            outline: 1px solid rgba(255,255,255,0.35);
+            outline-offset: 2px;
+        }
+        /* click on the number: the field gets wider and shows up/down buttons */
+        .keyboardD.open {
+            width: 2.9cm;
+            cursor: default;
+        }
+        .number-steps {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            width: 0.9cm;
+            box-sizing: border-box;
+            padding: 0 1.5mm 0 1.2mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1.2mm;
+            border-left: 1px solid #1e1e1e;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+        }
+        .keyboardD.open .number-steps {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .number-step {
+            height: 4.2mm;
+            padding: 0;
+            border: none;
+            border-radius: 0.6mm;
+            background: #2a2a2a;
+            color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow:
+                0 0.5mm 0.8mm rgba(0,0,0,0.6),
+                inset 0 0.3mm 0.6mm rgba(255,255,255,0.15);
+        }
+        .number-step svg { width: 2.4mm; height: 2.4mm; fill: currentColor; }
+        .number-step:hover { background: #383838; }
+        .number-step:active { background: #1a1a1a; box-shadow: inset 0 0 1mm rgba(0,0,0,0.8); }
+        .number-step:disabled {
+            background: #161616;
+            color: #3a3a3a;
+            cursor: default;
+            box-shadow: none;
+        }
+        .number-range {
+            position: absolute;
+            left: 1.1cm;
+            top: calc(30px + 1.2cm + 6px);
+            z-index: 100;
+            color: #bbb;
+            font: 9px Arial, sans-serif;
+            letter-spacing: 0.02em;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+        }
+        .keyboardD.open ~ .number-range { opacity: 1; }
+        .LEDrow, .Addressrow{
+            gap: 8.1mm;
+            display:flex;
+            white-space: nowrap;
+            width: 100%;
+            height:12.5%;
+            z-index:101;
+        }
+        .REDrow, .GREENrow{
+            gap: 7.3mm;
+            display:flex;
+            white-space: nowrap;
+            width: 100%;
+            height:12.5%;
+            z-index:101;
+        }
+        .nrow1{
+            text-align: left;
+            width: 9.5mm;
+            height:1.1cm;
+            z-index:101;
+            float: left;
+            margin-top: 1.5px;
+        }
+        .sevensegment-key{
+            user-select: none;
+            padding-left:3px;
+            letter-spacing: -2px;
+            color: white;
+            line-height: 0.95;
+            font-family: "seven segment";
+            font-style: italic;
+            font-size: 1.2cm;
+            font-weight: 500;
+            transform: scaleX(1.2);
+        }
+        .frame{
+            user-select: none;
+            width: 450px;
+            height:450px;
+            display: table-cell;
+        }
+        .outer-frame {
+            user-select: none;
+            width:11.8cm;
+            height:11.8cm;
+            background:#ffffff;
+            border-radius:4mm 4mm 7mm 7mm;
+            position:relative;
+            box-shadow:
+                0 2mm 4mm rgba(0,0,0,0.25),
+                inset 0 0 3mm rgba(0,0,0,0.25);
+        }
+        .underscore{
+            font-family:Consolas;
+            font-size:7.5px;
+            position: relative;
+            top:-0.9px;
+            padding:1px;
+        }
+        .label{
+            position:absolute;
+            left:6mm;
+            bottom:2mm;
+            width:4cm;
+            height:0.4cm;
+            font-size:12pt;
+            font-family:"Starch Slab",Courier New, arial;
+        }
+        .label2{
+            color: white;
+            position:absolute;
+            right:10mm;
+            top:3mm;
+            width:4cm;
+            height:0.4cm;
+            font-size:17pt;
+            font-family:"Marklin","Courier New", arial;
+            font-weight: 900;
+            z-index:1;
+        }
+        .label3{
+            color: white;
+            position:absolute;
+            right:10mm;
+            top:13mm;
+            width:4cm;
+            height:0.4cm;
+            font-size:6pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+        }
+        .inner-frame {
+            width:10.9cm;
+            height:8.9cm;
+            background:#000;
+            border-radius:3mm 3mm 5mm 5mm;
+            position:absolute;
+            left:50%;
+            transform:translateX(-50%);
+            top:0mm;
+            box-shadow:
+                0 3mm 5mm rgba(0,0,0,0.35),
+                inset 0 0 6mm rgba(150,150,150,1.95);
+        }
+        .bolt {
+            width:4mm;
+            height:4mm;
+            position:absolute;
+            background:#222;
+            border-radius:50%;
+            box-shadow:
+                0 1mm 2mm rgba(0,0,0,0.35),
+                inset 0 0.6mm 1.2mm rgba(255,255,255,0.25);
+        }
+        .bolt.tl { top:5mm; left:5mm; }
+        .bolt.tr { top:5mm; right:5mm; }
+        .bolt.bl { bottom:5mm; left:5mm; }
+        .bolt.br { bottom:5mm; right:5mm; }
+
+    </style>
+</head>
+
+<body>
+    <div class="frame">
+        <div class="outer-frame">
+            <p class="label">keyboard</p>
+            <p class="label2">märklin</p>
+            <p class="label3">DIGITAL<span class="underscore">_________</span>H0</p>
+            <div class="inner-frame">
+                <div class="keyboardD" id="numberDisplay" role="spinbutton" tabindex="0"
+                     aria-label="Keyboard number" aria-valuemin="1" aria-valuemax="16" aria-valuenow="1">
+                    <div class="nrow1">
+                        <div class="sevensegment-key" id="digit1">0</div>
+                    </div>
+                    <div class="nrow1">
+                        <div class="sevensegment-key" id="digit2">1</div>
+                    </div>
+                    <div class="number-steps">
+                        <button class="number-step" id="numberUp" tabindex="-1" aria-label="Keyboard number up">
+                            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1.5L9.5 8.5H0.5Z"/></svg>
+                        </button>
+                        <button class="number-step" id="numberDown" tabindex="-1" aria-label="Keyboard number down">
+                            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 8.5L0.5 1.5H9.5Z"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="number-range" id="numberRange"></div>
+
+                <!-- 2 blocks of 8: LED, red button (top), number, green button (bottom) -->
+                <div class="keys" id="keys"></div>
+
+                <div>
+                    <div class="bolt tl"></div>
+                    <div class="bolt tr"></div>
+                    <div class="bolt bl"></div>
+                    <div class="bolt br"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // A keyboard switches 16 turnouts/signals: keyboard 1 = addresses 1-16, keyboard 2 = 17-32, ... keyboard 16 = 241-256.
+        // Red button (top) = red, green button (bottom) = green. The LED is lit while the switch is red.
+        // A switch that was never pressed is red (like the real keyboard after switching on).
+        let number = 1;
+        const switches = {}; // address -> 'red' | 'green' (embedded: copy of the states in control.html)
+
+        function switchState(address) {
+            return switches[address] === 'green' ? 'green' : 'red';
+        }
+
+        const keysEl = document.getElementById('keys');
+        const leds = [];
+
+        function addressOf(button) {
+            return (number - 1) * 16 + button;
+        }
+
+        function buildKeys() {
+            for (let block = 0; block < 2; block++) {
+                const ledRow = document.createElement('div');
+                ledRow.className = 'LEDrow';
+                const redRow = document.createElement('div');
+                redRow.className = 'REDrow';
+                const numberRow = document.createElement('div');
+                numberRow.className = 'Addressrow';
+                const greenRow = document.createElement('div');
+                greenRow.className = 'GREENrow';
+
+                for (let i = 1; i <= 8; i++) {
+                    const button = block * 8 + i;
+
+                    const ledCell = document.createElement('div');
+                    ledCell.className = 'narrow';
+                    const led = document.createElement('div');
+                    ledCell.appendChild(led);
+                    ledRow.appendChild(ledCell);
+                    leds[button] = led;
+
+                    const red = document.createElement('div');
+                    red.className = 'rButton';
+                    red.dataset.button = button;
+                    red.dataset.state = 'red';
+                    redRow.appendChild(red);
+
+                    const numberCell = document.createElement('div');
+                    numberCell.className = 'narrow';
+                    const label = document.createElement('div');
+                    label.className = 'address';
+                    label.textContent = button;
+                    numberCell.appendChild(label);
+                    numberRow.appendChild(numberCell);
+
+                    const green = document.createElement('div');
+                    green.className = 'gButton';
+                    green.dataset.button = button;
+                    green.dataset.state = 'green';
+                    greenRow.appendChild(green);
+                }
+                keysEl.append(ledRow, redRow, numberRow, greenRow);
+            }
+        }
+
+        function showNumber() {
+            const text = String(number).padStart(2, '0');
+            document.getElementById('digit1').textContent = text[0];
+            document.getElementById('digit2').textContent = text[1];
+            // up/down greyed out at the ends of the range
+            document.getElementById('numberUp').disabled = number >= 16;
+            document.getElementById('numberDown').disabled = number <= 1;
+            const range = `switches ${(number - 1) * 16 + 1}–${number * 16}`;
+            document.getElementById('numberRange').textContent = range;
+            display.setAttribute('aria-valuenow', number);
+            display.title = `Keyboard ${number} (${range}), click to change`;
+        }
+
+        function showLEDs() {
+            for (let button = 1; button <= 16; button++) {
+                leds[button].className = switchState(addressOf(button)) === 'red' ? 'LED' : '';
+            }
+            keysEl.querySelectorAll('[data-button]').forEach(el => {
+                el.title = `Switch ${addressOf(Number(el.dataset.button))} ${el.dataset.state}`;
+            });
+        }
+
+        keysEl.addEventListener('click', e => {
+            const el = e.target.closest('[data-button]');
+            if (!el) return;
+            const address = addressOf(Number(el.dataset.button));
+            const state = el.dataset.state;
+            switches[address] = state;
+            console.log("Switch " + address + " " + state);
+            showLEDs();
+            if (EMBEDDED) {
+                window.parent.postMessage({ type: 'marklin-unit', action: 'switch', address: address, state: state }, '*');
+            }
+        });
+
+        // ---- Keyboard number: click the display, it gets wider and shows up/down buttons ----
+        const display = document.getElementById('numberDisplay');
+
+        function setNumber(n) {
+            n = Math.max(1, Math.min(16, n));
+            if (n === number) return;
+            number = n;
+            console.log("Keyboard number: " + number + " (switches " + ((number - 1) * 16 + 1) + "-" + (number * 16) + ")");
+            showNumber();
+            showLEDs();
+            reportState();
+        }
+
+        function isOpen() {
+            return display.classList.contains('open');
+        }
+
+        display.addEventListener('click', e => {
+            if (e.target.closest('.number-steps')) return; // up/down (also when greyed out) keep it open
+            display.classList.toggle('open');
+        });
+        document.getElementById('numberUp').addEventListener('click', () => setNumber(number + 1));
+        document.getElementById('numberDown').addEventListener('click', () => setNumber(number - 1));
+        display.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                display.classList.add('open');
+                setNumber(number + (e.key === 'ArrowUp' ? 1 : -1));
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                display.classList.toggle('open');
+            } else if (e.key === 'Escape') {
+                display.classList.remove('open');
+            }
+        });
+        // mouse wheel changes the number while it is open
+        display.addEventListener('wheel', e => {
+            if (!isOpen()) return;
+            e.preventDefault();
+            setNumber(number + (e.deltaY < 0 ? 1 : -1));
+        }, { passive: false });
+        // click anywhere else closes it: in this keyboard ...
+        document.addEventListener('mousedown', e => {
+            if (!display.contains(e.target)) display.classList.remove('open');
+        });
+        // ... or outside it (another unit, the toolbar, ...), that takes the focus away from this page
+        window.addEventListener('blur', () => display.classList.remove('open'));
+
+        // ---- control.html ----
+        let restored = false; // report nothing before control.html gave us the saved state
+        function reportState() {
+            if (!EMBEDDED || !restored) return;
+            window.parent.postMessage({ type: 'marklin-unit', action: 'state', state: { number: number } }, '*');
+        }
+
+        window.addEventListener('message', e => {
+            if (!EMBEDDED || e.source !== window.parent || !e.data) return;
+            const msg = e.data;
+            if (msg.type === 'marklin-store') {
+                // all switch states + the saved number of this keyboard, sent when it is loaded
+                Object.keys(switches).forEach(a => delete switches[a]);
+                Object.assign(switches, msg.switches);
+                const n = msg.unitState && Number(msg.unitState.number);
+                if (n >= 1 && n <= 16) number = n;
+                showNumber();
+                showLEDs();
+                restored = true;
+            } else if (msg.type === 'marklin-switch') {
+                // another keyboard switched (the LED shows it if it has the same number)
+                switches[msg.address] = msg.state;
+                showLEDs();
+            }
+        });
+
+        buildKeys();
+        showNumber();
+        showLEDs();
+    </script>
+</body>
+
+</html>

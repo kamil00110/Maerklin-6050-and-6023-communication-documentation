@@ -3,159 +3,1582 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Windows-Style Taskbar Draggable Iframes</title>
+<title>CU Simulator</title>
+<script>
+// ---------- Saved data ----------
+// Everything is saved in cookies. Cookies do not work when the page is opened as a file (file://),
+// the browser storage is used there instead.
+const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '') || '/';
+// "Forever". Browsers shorten this (Chrome: 400 days), so everything is saved again on every visit.
+const COOKIE_EXPIRES = 'Fri, 31 Dec 9999 23:59:59 GMT';
+const COOKIE_CHUNK = 3800; // a cookie can hold about 4 KB
+
+const cookiesWork = (() => {
+  try {
+    document.cookie = `c80_test=1; path=${COOKIE_PATH}; SameSite=Lax`;
+    const ok = document.cookie.indexOf('c80_test=1') !== -1;
+    document.cookie = `c80_test=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${COOKIE_PATH}`;
+    return ok;
+  } catch (e) {
+    return false;
+  }
+})();
+
+const saved = {
+  // raw (already encoded) values
+  get(name) {
+    if (cookiesWork) {
+      const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+      return match ? match[1] : null;
+    }
+    try { return localStorage.getItem(name); } catch (e) { return null; }
+  },
+  set(name, value) {
+    if (cookiesWork) {
+      document.cookie = `${name}=${value}; expires=${COOKIE_EXPIRES}; path=${COOKIE_PATH}; SameSite=Lax`;
+    } else {
+      try { localStorage.setItem(name, value); } catch (e) {}
+    }
+  },
+  remove(name) {
+    if (cookiesWork) {
+      new Set([COOKIE_PATH, '/']).forEach(path => {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=${path}`;
+      });
+    } else {
+      try { localStorage.removeItem(name); } catch (e) {}
+    }
+  },
+  names(prefix) {
+    if (cookiesWork) {
+      return document.cookie.split('; ').map(c => c.split('=')[0]).filter(n => n.startsWith(prefix));
+    }
+    try { return Object.keys(localStorage).filter(n => n.startsWith(prefix)); } catch (e) { return []; }
+  },
+  // text of any length, split over name0, name1, ...
+  write(name, text) {
+    const value = encodeURIComponent(text);
+    let i = 0;
+    for (let pos = 0; pos < value.length || i === 0; pos += COOKIE_CHUNK) {
+      saved.set(name + i, value.slice(pos, pos + COOKIE_CHUNK));
+      i++;
+    }
+    for (; saved.get(name + i) !== null; i++) saved.remove(name + i);
+  },
+  read(name) {
+    let value = '';
+    for (let i = 0; ; i++) {
+      const part = saved.get(name + i);
+      if (part === null) break;
+      value += part;
+    }
+    try { return value ? decodeURIComponent(value) : null; } catch (e) { return null; }
+  },
+  erase(name) {
+    for (let i = 0; saved.get(name + i) !== null; i++) saved.remove(name + i);
+  },
+};
+
+const DEFAULT_PREFS = { theme: 'light', scale: 100, save: true };
+let prefs = Object.assign({}, DEFAULT_PREFS);
+try { Object.assign(prefs, JSON.parse(saved.read('c80_prefs'))); } catch (e) {}
+
+// apply the theme before the page is drawn (no flash)
+if (prefs.theme === 'dark') document.documentElement.dataset.theme = 'dark';
+</script>
+<script src="remote-protocol.js"></script>
 <style>
+:root {
+  --bg: #f0f0f0;
+  --border: #d4d4d4;
+  --text: #222;
+  --muted: #666;
+  --faint: #b4b4b4;
+  --btn: #fff;
+  --btn-hover: #e8e8e8;
+  --btn-border: #c4c4c4;
+  --out-bg: #fff;
+  --out-text: #333;
+  --accent: #2e7d32;
+  --switch-off: #c4c4c4;
+  --danger: #e53935;
+  --danger-bg: rgba(229, 57, 53, 0.12);
+  --unit-shadow: rgba(0, 0, 0, 0.3);
+}
+:root[data-theme="dark"] {
+  --bg: #111;
+  --border: #262626;
+  --text: #eee;
+  --muted: #999;
+  --faint: #3c3c3c;
+  --btn: #222;
+  --btn-hover: #333;
+  --btn-border: #444;
+  --out-bg: #000;
+  --out-text: #bbb;
+  --accent: #43a047;
+  --switch-off: #444;
+  --unit-shadow: rgba(0, 0, 0, 0.7);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
 body {
-  margin: 0;
-  font-family: sans-serif;
-  background: #f0f0f0;
-}
-#addUnit {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  padding: 8px 12px;
-  font-size: 16px;
-}
-#taskbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 13cm;
-  background: #333;
-  display: flex;
-  align-items: flex-start;
-  overflow: hidden;
-  padding: 5px;
-  box-sizing: border-box;
-  user-select: none;
-}
-.unit-container {
-  position: relative;
-  width: 13cm;
-  height: 13cm;
-  margin: 0 5px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #222;
-  border: 1px solid #555;
-  flex-shrink: 0;
-  transition: transform 0.2s;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
-.drag-handle {
-  height: 20px;
-  background: #555;
-  cursor: grab;
-  color: white;
+button {
+  padding: 6px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+button:hover { background: var(--btn-hover); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:disabled:hover { background: var(--btn); }
+
+/* "?" with the setup info shown on hover */
+.help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid var(--btn-border);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+  user-select: none;
+  outline: none;
+}
+.help:hover, .help:focus { color: var(--text); border-color: var(--muted); }
+.help-pop {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: 320px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--out-bg);
+  color: var(--text);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  cursor: default;
+}
+.help:hover .help-pop, .help:focus .help-pop { display: block; }
+.help-pop b { font-weight: 600; }
+.help-pop ol { margin: 6px 0; padding-left: 18px; }
+.help-pop p { margin: 0; color: var(--muted); }
+
+/* ---------- Top bar ---------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.toolbar h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+/* the other pages: green, apart from the settings */
+.nav-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: filter 0.15s;
+}
+.nav-btn:hover { filter: brightness(1.12); }
+.toolbar-sep {
+  align-self: stretch;
+  width: 1px;
+  margin: 2px 0;
+  background: var(--btn-border);
+}
+/* the mode switch: settings from here on to the right */
+.toolbar .mode { margin-right: auto; }
+.switch.is-disabled { opacity: 0.45; cursor: not-allowed; }
+.switch.is-disabled input { cursor: not-allowed; }
+.group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.scale input { width: 100px; accent-color: var(--accent); }
+.scale output { min-width: 36px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* on/off switch */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.switch input {
+  appearance: none;
+  position: relative;
+  width: 30px;
+  height: 17px;
+  margin: 0;
+  border-radius: 9px;
+  background: var(--switch-off);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch input::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.switch input:checked { background: var(--accent); }
+.switch input:checked::before { transform: translateX(13px); }
+.switch input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Row of units (top) ---------- */
+#units {
+  --scale: 1;
+  position: relative; /* offsetLeft/offsetTop of the units are relative to this */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 8px 16px 12px;
+}
+#units:empty::before {
+  content: "No units, add a Control 80f or a Keyboard.";
+  padding: 16px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.unit {
+  position: relative;
+  width: calc(446px * var(--scale));
+  flex-shrink: 0;
+}
+.unit.dragging {
+  z-index: 10;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.35));
+}
+
+/* Drag handle: a small grip bar, brighter on hover */
+.unit-handle {
+  position: relative;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: grab;
+  touch-action: none;
   user-select: none;
 }
-.unit-frame {
-  flex: 1;
-  border: none;
-  width: 100%;
-  height: 100%;
+.unit-handle::before {
+  content: "";
+  width: 34px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--faint);
+  transition: background 0.15s, width 0.15s;
 }
+.unit:hover .unit-handle::before { background: var(--muted); width: 44px; }
+.unit.dragging .unit-handle::before { background: var(--muted); width: 44px; }
+.unit.dragging .unit-handle { cursor: grabbing; }
+
+/* Delete button: grey, red on hover */
+.unit-close {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.unit-close svg { width: 9px; height: 9px; }
+.unit:hover .unit-close { color: var(--muted); }
+.unit .unit-close:hover { color: var(--danger); background: var(--danger-bg); }
+
+/* Infra Control: choose the COM port again (next to the delete button) and its state */
+.unit .unit-reload { right: 20px; }
+.unit .unit-reload svg { width: 10px; height: 10px; }
+.unit .unit-reload:hover { color: var(--accent); background: var(--btn-hover); }
+.unit-dot {
+  position: absolute;
+  top: 6px;
+  right: 42px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+.unit-dot.wait { background: #f9a825; }
+.unit-dot.ok { background: var(--accent); }
+.unit-dot.bad { background: var(--danger); }
+
+.unit-body {
+  width: calc(446px * var(--scale));
+  height: calc(452px * var(--scale));
+}
+.unit-frame {
+  display: block;
+  width: 446px;
+  height: 452px;
+  border: none;
+  background: transparent;
+  transform: scale(var(--scale));
+  transform-origin: 0 0;
+  filter: drop-shadow(0 2px 5px var(--unit-shadow));
+}
+
+/* While dragging: iframes must not steal the pointer */
+body.is-dragging { cursor: grabbing; user-select: none; }
+body.is-dragging iframe { pointer-events: none; }
+
+/* ---------- Output (bottom) ---------- */
+.output {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 16px;
+}
+.output-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0 8px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+.output-head button { padding: 3px 10px; font-size: 12px; }
+#output {
+  flex: 1;
+  width: 100%;
+  resize: none;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--out-bg);
+  color: var(--out-text);
+  font: 12px/1.5 ui-monospace, Consolas, "Courier New", monospace;
+  white-space: pre;
+  outline: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--faint) transparent;
+}
+
 </style>
 </head>
 <body>
 
-<button id="addUnit">Add Unit</button>
-<div id="taskbar"></div>
+<div class="toolbar">
+  <h1>CU Simulator</h1>
+  <nav class="group">
+    <a class="nav-btn" href="remote.html" title="The phone remote (IR-control), open it on the phone">Remote</a>
+    <a class="nav-btn" href="emulator.html" title="Märklin 6050 Emulator">Emulator</a>
+  </nav>
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <label class="switch mode is-disabled" title="Hardware (a real Central Unit) is not there yet">
+    Simulation
+    <input id="hardwareMode" type="checkbox" disabled>
+    Hardware
+  </label>
+  <div class="group">
+    <button id="add80f">+ Control 80f</button>
+    <button id="addKeyboard">+ Keyboard</button>
+    <button id="addInfra">+ Infra Control 80f</button>
+    <span class="help" tabindex="0" aria-label="How to set up the Infra Control 80f">?
+      <span class="help-pop" role="tooltip">
+        <b>Infra Control 80f: the phone as remote (remote.html)</b>
+        <ol>
+          <li>Pair the phone with this PC (Windows: Settings › Bluetooth &amp; devices).</li>
+          <li>Make an incoming COM port: More Bluetooth settings › COM Ports › Add… › Incoming.</li>
+          <li>Click <b>+ Infra Control 80f</b> and choose that COM port. It is remembered, ↻ on the unit chooses again.</li>
+          <li>On the phone open remote.html in Chrome (Android, Chrome 138 or newer), tap Connect and choose this PC.</li>
+        </ol>
+        <p>The slider on the phone picks remote 1-4. Each remote selects its own loco like a Control 80f. Only one Infra Control can be added.</p>
+      </span>
+    </span>
+  </div>
+  <div class="group">
+    <button id="resendStates" title="Send STOP/GO, the state of every loco and every switch again, so the layout matches what the units show (e.g. after a reload)">Resend all states</button>
+    <button id="resetStates" title="All units back to their start state (no address selected, keyboards keep their number), all locos to speed 0, direction ▲, functions off and all switches back to red">Reset all states</button>
+  </div>
+  <label class="group scale" title="Size of the units, smaller fits more in a row">
+    Size
+    <input id="scale" type="range" min="40" max="100" step="5" value="100">
+    <output id="scaleValue">100%</output>
+  </label>
+  <div class="group">
+    <label class="switch" id="saveLabel" title="Remember the units, their states, all loco states and all switch states after a reload">
+      <input id="saveCookies" type="checkbox">
+      Save in cookies
+    </label>
+    <button id="resetCookies" title="Delete everything saved and start like on the first visit">Reset cookies</button>
+  </div>
+  <div class="group">
+    <button id="exportSetup" title="Download the units, all states and settings as a file">Export</button>
+    <button id="importSetup" title="Load units, states and settings from an exported file">Import</button>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
+  </div>
+  <label class="switch">
+    <input id="darkMode" type="checkbox">
+    Dark mode
+  </label>
+</div>
+
+<div id="units"></div>
+
+<div class="output">
+  <div class="output-head">
+    <span>Output</span>
+    <button id="clearOutput">Clear</button>
+  </div>
+  <textarea id="output" readonly spellcheck="false"></textarea>
+</div>
 
 <script>
-const taskbar = document.getElementById('taskbar');
-const addBtn = document.getElementById('addUnit');
+const unitsEl = document.getElementById('units');
+const outputEl = document.getElementById('output');
+const scaleInput = document.getElementById('scale');
+const saveInput = document.getElementById('saveCookies');
+const darkInput = document.getElementById('darkMode');
 
-const SLOT_WIDTH = 13 * 37.7952755906 + 10; // 13cm + margin
-let units = []; // array of objects {el: container, slot: index}
+const EASE = 'cubic-bezier(.2, .8, .2, 1)';
+const FUNCTIONS = ['f0', 'f1', 'f2', 'f3', 'f4'];
+const ROT_MIN = -60; // knob angle at speed 0 (same as in unit.html)
+const ROT_MAX = 60;
 
-function createUnit() {
-  const container = document.createElement('div');
-  container.className = 'unit-container';
+// unit types and their page ('80f' = Control 80f, 'keyboard' = Keyboard for turnouts/signals,
+// 'infra' = Infra Control 80f, the phone remotes, only one)
+const UNIT_PAGES = { '80f': 'unit.html', keyboard: 'keyboard.html', infra: 'infra-unit.html' };
+const UNIT_NAMES = { '80f': 'Control 80f', keyboard: 'Keyboard', infra: 'Infra Control 80f' };
 
-  const handle = document.createElement('div');
-  handle.className = 'drag-handle';
-  handle.textContent = 'Drag';
+let units = [];      // in visual order: {id, type, card, handle, frame, state, addresses, loading, anim}
+let nextUnitId = 1;
+let store = {};      // address -> loco data, shared by all units
+let switches = {};   // switch address (1-256) -> 'red' | 'green', shared by all keyboards (never pressed = red)
+let stopped = false; // STOP / GO for all units
 
-  const iframe = document.createElement('iframe');
-  iframe.src = 'unit.html';
-  iframe.className = 'unit-frame';
+/* ---------- Checking loaded data (cookies, imported files) ---------- */
 
-  container.appendChild(handle);
-  container.appendChild(iframe);
-  taskbar.appendChild(container);
+function defaultAddressData() {
+  return { speed: 0, dir: false, f0: false, f1: false, f2: false, f3: false, f4: false, used: false };
+}
 
-  const unit = { el: container, slot: units.length };
-  units.push(unit);
+function cleanLoco(d) {
+  const loco = defaultAddressData();
+  if (!d || typeof d !== 'object') return loco;
+  const speed = Math.round(Number(d.speed));
+  loco.speed = Number.isFinite(speed) ? Math.max(0, Math.min(14, speed)) : 0;
+  loco.dir = !!d.dir;
+  FUNCTIONS.forEach(f => { loco[f] = !!d[f]; });
+  return loco;
+}
 
-  let isDragging = false;
-  let startX = 0;
-  let originalSlot = unit.slot;
+function cleanLocos(obj) {
+  const locos = {};
+  if (obj && typeof obj === 'object') {
+    Object.keys(obj).forEach(address => {
+      if (/^\d+$/.test(address)) locos[address] = cleanLoco(obj[address]);
+    });
+  }
+  return locos;
+}
 
-  handle.addEventListener('pointerdown', e => {
-    isDragging = true;
-    startX = e.clientX;
-    originalSlot = unit.slot;
-    container.style.zIndex = 1000;
-    handle.setPointerCapture(e.pointerId);
+// state of a unit as reported by unit.html (see getUnitState there)
+function cleanUnitState(s) {
+  if (!s || typeof s !== 'object') return null;
+  const knob = Number(s.knob);
+  const leds = {};
+  FUNCTIONS.forEach(f => { leds[f] = !!(s.leds && s.leds[f]); });
+  return {
+    digits: (Array.isArray(s.digits) ? s.digits : []).map(String).filter(d => /^\d$/.test(d)).slice(0, 2),
+    knob: Number.isFinite(knob) ? Math.max(ROT_MIN, Math.min(ROT_MAX, knob)) : ROT_MIN,
+    mode: s.mode === 'L' || s.mode === 'F' ? s.mode : null,
+    arrow: s.arrow === 'up' || s.arrow === 'down' ? s.arrow : null,
+    leds,
+  };
+}
+
+// state of a keyboard: its number 1-16 (keyboard 1 = switches 1-16, keyboard 2 = 17-32, ...)
+function cleanKeyboardState(s) {
+  const number = Math.round(Number(s && s.number));
+  return { number: number >= 1 && number <= 16 ? number : 1 };
+}
+
+// state of the Infra Control: the loco of each remote (channel 0-3)
+function cleanInfraState(s) {
+  const channels = [0, 1, 2, 3].map(i => {
+    const address = s && Array.isArray(s.channels) ? s.channels[i] : null;
+    return /^\d\d$/.test(String(address)) ? String(address) : null;
   });
+  return { channels };
+}
 
-  handle.addEventListener('pointermove', e => {
-    if (!isDragging) return;
+function cleanType(type) {
+  return type === 'keyboard' || type === 'infra' ? type : '80f';
+}
 
-    const dx = e.clientX - startX;
-    container.style.transform = `translateX(${dx}px)`;
+function cleanState(type, s) {
+  if (type === 'keyboard') return cleanKeyboardState(s);
+  if (type === 'infra') return cleanInfraState(s);
+  return cleanUnitState(s);
+}
 
-    // Compute tentative slot
-    const centerX = container.offsetLeft + dx + container.offsetWidth / 2;
-    let newSlot = Math.round(centerX / SLOT_WIDTH);
-    if (newSlot < 0) newSlot = 0;
-    if (newSlot >= units.length) newSlot = units.length - 1;
+// one saved/exported unit: {type, state}; older saves only have the state of a Control 80f
+function cleanUnitEntry(entry) {
+  if (entry && typeof entry === 'object' && typeof entry.type === 'string') {
+    const type = cleanType(entry.type);
+    return { type, state: cleanState(type, entry.state) };
+  }
+  return { type: '80f', state: cleanUnitState(entry) };
+}
 
-    // Move other units temporarily
-    units.forEach(u => {
-      if (u === unit) return;
-      let shift = 0;
-      if (originalSlot < newSlot && u.slot > originalSlot && u.slot <= newSlot) shift = -SLOT_WIDTH;
-      if (originalSlot > newSlot && u.slot >= newSlot && u.slot < originalSlot) shift = SLOT_WIDTH;
-      u.el.style.transform = `translateX(${shift}px)`;
+function isSwitchAddress(address) {
+  return /^\d+$/.test(String(address)) && Number(address) >= 1 && Number(address) <= 256;
+}
+
+function cleanSwitches(obj) {
+  const result = {};
+  if (obj && typeof obj === 'object') {
+    Object.keys(obj).forEach(address => {
+      if (isSwitchAddress(address) && (obj[address] === 'red' || obj[address] === 'green')) {
+        result[Number(address)] = obj[address];
+      }
     });
+  }
+  return result;
+}
+
+function unitAddress(state) {
+  return state && state.digits && state.digits.length === 2 ? state.digits.join('') : null;
+}
+
+/* ---------- Saving ---------- */
+
+// locos in short form: address:speed:direction:f0f1f2f3f4, only the ones not in the start state
+function encodeLocos() {
+  return Object.keys(store).map(address => {
+    const d = store[address];
+    const bits = FUNCTIONS.map(f => (d[f] ? 1 : 0)).join('');
+    if (!d.speed && !d.dir && bits === '00000') return null;
+    return [address, d.speed, d.dir ? 1 : 0, bits].join(':');
+  }).filter(Boolean).join(',');
+}
+
+function decodeLocos(text) {
+  const locos = {};
+  (text || '').split(',').forEach(item => {
+    const [address, speed, dir, bits] = item.split(':');
+    if (!/^\d+$/.test(address) || !/^[01]{5}$/.test(bits || '')) return;
+    const d = { speed, dir: dir === '1' };
+    FUNCTIONS.forEach((f, i) => { d[f] = bits[i] === '1'; });
+    locos[address] = cleanLoco(d);
   });
+  return locos;
+}
 
-  handle.addEventListener('pointerup', e => {
-    if (!isDragging) return;
-    isDragging = false;
-    container.style.zIndex = '';
+// switches in short form: 5r,17g (r = red, g = green)
+function encodeSwitches() {
+  return Object.keys(switches).sort((a, b) => a - b).map(a => a + switches[a][0]).join(',');
+}
 
-    const dx = parseFloat(container.style.transform.replace('translateX(', '').replace('px)', '')) || 0;
-    const centerX = container.offsetLeft + dx + container.offsetWidth / 2;
-    let finalSlot = Math.round(centerX / SLOT_WIDTH);
-    if (finalSlot < 0) finalSlot = 0;
-    if (finalSlot >= units.length) finalSlot = units.length - 1;
+function decodeSwitches(text) {
+  const result = {};
+  (text || '').split(',').forEach(item => {
+    const m = /^(\d+)([rg])$/.exec(item);
+    if (m && isSwitchAddress(m[1])) result[Number(m[1])] = m[2] === 'r' ? 'red' : 'green';
+  });
+  return result;
+}
 
-    // Update unit slots
-    const oldSlot = unit.slot;
-    unit.slot = finalSlot;
-    units.forEach(u => {
-      if (u === unit) return;
-      if (oldSlot < finalSlot && u.slot > oldSlot && u.slot <= finalSlot) u.slot -= 1;
-      if (oldSlot > finalSlot && u.slot >= finalSlot && u.slot < oldSlot) u.slot += 1;
-    });
+function savePrefs() {
+  saved.write('c80_prefs', JSON.stringify(prefs));
+}
 
-    // Reset transforms and apply final positions
-    units.forEach(u => {
-      u.el.style.transform = `translateX(${u.slot * SLOT_WIDTH - u.el.offsetLeft}px)`;
-    });
+let saveTimer = 0;
+function saveAll() {
+  clearTimeout(saveTimer);
+  saveTimer = 0;
+  if (!prefs.save) return;
+  saved.write('c80_setup', JSON.stringify({ stopped, units: units.map(u => ({ type: u.type, state: u.state })) }));
+  saved.write('c80_locos', encodeLocos());
+  saved.write('c80_switches', encodeSwitches());
+}
+
+// many changes come quickly one after another (knob), save once they are done
+function scheduleSave() {
+  if (!prefs.save || saveTimer) return;
+  saveTimer = setTimeout(saveAll, 300);
+}
+
+// save changes that are still waiting when the page is closed or hidden.
+// Only then: a second open tab must not write its old state over newer saves (e.g. after Reset cookies).
+addEventListener('pagehide', () => {
+  if (saveTimer) saveAll();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && saveTimer) saveAll();
+});
+
+function eraseSavedStates() {
+  saved.erase('c80_setup');
+  saved.erase('c80_locos');
+  saved.erase('c80_switches');
+}
+
+/* ---------- Settings ---------- */
+
+function applyTheme() {
+  document.documentElement.dataset.theme = prefs.theme;
+  darkInput.checked = prefs.theme === 'dark';
+}
+
+function applyScale() {
+  scaleInput.value = prefs.scale;
+  unitsEl.style.setProperty('--scale', prefs.scale / 100);
+  document.getElementById('scaleValue').textContent = prefs.scale + '%';
+}
+
+function cleanPrefs(p) {
+  const scale = Math.round(Number(p && p.scale) / 5) * 5;
+  return {
+    theme: p && p.theme === 'dark' ? 'dark' : 'light',
+    scale: Number.isFinite(scale) ? Math.max(40, Math.min(100, scale)) : 100,
+    save: !(p && p.save === false),
+  };
+}
+
+prefs = cleanPrefs(prefs);
+applyTheme();
+applyScale();
+saveInput.checked = prefs.save;
+
+darkInput.addEventListener('change', () => {
+  prefs.theme = darkInput.checked ? 'dark' : 'light';
+  applyTheme();
+  savePrefs();
+});
+
+scaleInput.addEventListener('input', () => {
+  prefs.scale = Number(scaleInput.value);
+  applyScale();
+  savePrefs();
+});
+
+saveInput.addEventListener('change', () => {
+  prefs.save = saveInput.checked;
+  savePrefs();
+  if (prefs.save) saveAll();
+  else eraseSavedStates();
+});
+
+if (!cookiesWork) {
+  document.getElementById('saveLabel').title +=
+    '. Cookies do not work when the page is opened as a file, the browser storage is used instead.';
+}
+
+/* ---------- Loco data shared by all units ---------- */
+
+function sendToUnits(msg, except) {
+  units.forEach(u => {
+    if (u !== except && !u.loading && u.frame.contentWindow) u.frame.contentWindow.postMessage(msg, '*');
   });
 }
 
-addBtn.addEventListener('click', createUnit);
-createUnit();
+// unit.html sends every change of a loco: {type: 'marklin-unit', action: 'save', address, data}
+function onUnitSave(unit, address, data) {
+  if (!/^\d+$/.test(address) || !data) return;
+  const old = store[address] || defaultAddressData();
+  const next = Object.assign(cleanLoco(data), { used: !!data.used });
+  store[address] = next;
+
+  if (next.used) unit.addresses.add(address);
+  else unit.addresses.delete(address);
+
+  logChanges(address, old, next);
+  sendToUnits({ type: 'marklin-address', address, data: next }, unit);
+  infraLocoChanged(address);
+  scheduleSave();
+}
+
+// free the addresses of a unit that is removed
+function releaseAddresses(unit) {
+  unit.addresses.forEach(address => {
+    const old = store[address];
+    const next = Object.assign({}, old, { used: false });
+    store[address] = next;
+    logChanges(address, old, next);
+    sendToUnits({ type: 'marklin-address', address, data: next }, unit);
+  });
+  unit.addresses.clear();
+}
+
+function setStopped(value, unit) {
+  if (value === stopped) return;
+  stopped = value;
+  log(value ? 'STOP' : 'GO');
+  sendToUnits({ type: 'marklin-stop', value }, unit);
+  // the red LED of the phone remote (a remote that pressed STOP/GO gets it as answer)
+  if (unit !== infra.unit) infraPush(P.encode.stopgo(0, false, value));
+  scheduleSave();
+}
+
+// keyboard.html sends every button press: {type: 'marklin-unit', action: 'switch', address, state}
+// every press is sent (like the real keyboard, pressing again switches again)
+function onSwitch(unit, address, state) {
+  if (!isSwitchAddress(address) || (state !== 'red' && state !== 'green')) return;
+  address = Number(address);
+  switches[address] = state;
+  log(`Switch ${address}  ${state}`);
+  // all other keyboards update their LED (the ones with the same number show it)
+  sendToUnits({ type: 'marklin-switch', address, state }, unit);
+  scheduleSave();
+}
+
+window.addEventListener('message', e => {
+  const msg = e.data;
+  if (!msg || msg.type !== 'marklin-unit') return;
+  const unit = units.find(u => u.frame.contentWindow === e.source);
+  // ignore a unit that is (re)loading, the message is from the page that is going away
+  if (!unit || unit.loading) return;
+  if (unit.type === '80f') {
+    if (msg.action === 'save') onUnitSave(unit, String(msg.address), msg.data);
+    else if (msg.action === 'stop') setStopped(!!msg.value, unit);
+  } else if (msg.action === 'switch') {
+    onSwitch(unit, msg.address, msg.state);
+  }
+  if (msg.action === 'state') {
+    unit.state = cleanState(unit.type, msg.state);
+    scheduleSave();
+  }
+});
+
+/* ---------- Output ---------- */
+
+const MAX_LINES = 1000;
+let lines = [];
+
+function log(text) {
+  const atBottom = outputEl.scrollHeight - outputEl.scrollTop - outputEl.clientHeight < 4;
+  const time = new Date().toLocaleTimeString([], { hour12: false });
+  lines.push(`[${time}]  ${text}`);
+  if (lines.length > MAX_LINES) lines.splice(0, lines.length - MAX_LINES);
+  outputEl.value = lines.join('\n');
+  if (atBottom) outputEl.scrollTop = outputEl.scrollHeight;
+}
+
+function logChanges(address, old, next) {
+  const loco = `Loco ${address}`;
+  if (!!next.used !== !!old.used) log(`${loco}  ${next.used ? 'selected' : 'released'}`);
+  if (next.speed !== old.speed) log(`${loco}  speed ${next.speed}`);
+  if (!!next.dir !== !!old.dir) log(`${loco}  direction ${next.dir ? '▼' : '▲'}`);
+  FUNCTIONS.forEach(f => {
+    if (!!next[f] !== !!old[f]) log(`${loco}  ${f === 'f0' ? 'function' : f} ${next[f] ? 'on' : 'off'}`);
+  });
+}
+
+// send STOP/GO, the full state of every loco and every switch again, e.g. after a reload,
+// so the locos and switches on the layout match what the units show
+function resendAllStates() {
+  log('Resending all states');
+  log(stopped ? 'STOP' : 'GO');
+  Object.keys(store).sort((a, b) => a - b).forEach(address => {
+    const d = store[address];
+    const funcs = FUNCTIONS.map(f => `${f === 'f0' ? 'function' : f} ${d[f] ? 'on' : 'off'}`).join('  ');
+    log(`Loco ${address}  speed ${d.speed}  direction ${d.dir ? '▼' : '▲'}  ${funcs}`);
+  });
+  // every switch shown on a keyboard (never pressed = red) and every other switch that was pressed
+  const shown = new Set(Object.keys(switches).map(Number));
+  units.filter(u => u.type === 'keyboard').forEach(u => {
+    for (let button = 1; button <= 16; button++) shown.add((u.state.number - 1) * 16 + button);
+  });
+  [...shown].sort((a, b) => a - b).forEach(address => {
+    log(`Switch ${address}  ${switches[address] || 'red'}`);
+  });
+}
+
+document.getElementById('clearOutput').addEventListener('click', () => {
+  lines = [];
+  outputEl.value = '';
+});
+
+/* ---------- Infra Control 80f: phone remotes (remote.html) over a Bluetooth COM port ---------- */
+// The phone sends 1 byte per button press and gets an answer for every one (remote-protocol.js).
+// Each of the 4 remotes (the slider on the phone) selects its own loco like a Control 80f. The
+// locos are the same ones the units use, every change is logged like one made on a unit.
+// The unit (infra-unit.html) only shows what the last command did.
+
+const P = window.RemoteProtocol;
+const REMOTE_QUIET = 15000; // nothing from the phone for this long: remote gone (it sends every 5 s)
+const infra = {
+  unit: null,
+  channels: [0, 1, 2, 3].map(() => ({ digits: [], address: null })), // digits: typed so far
+  last: null,     // remote (channel) of the last command, shown on the unit (null = none yet)
+  port: null,
+  writer: null,
+  reader: null,
+  readDone: null,
+  retryTimer: 0,
+  closing: Promise.resolve(),
+  heard: 0,       // last byte from the phone
+  status: 'none', // none, wait (port open), ok (remote there), bad
+  statusText: 'no COM port chosen',
+};
+const addInfraButton = document.getElementById('addInfra');
+
+function updateInfraButton() {
+  addInfraButton.disabled = !!infra.unit;
+  addInfraButton.title = infra.unit
+    ? 'Only one Infra Control 80f can be added'
+    : 'Add the Infra Control 80f: phone remotes over Bluetooth (it asks for the COM port)';
+}
+
+function infraStatus(status, text) {
+  infra.status = status;
+  infra.statusText = text;
+  showInfraStatus();
+  showInfra(); // (the lock LED)
+  log(`Infra Control  ${text}`);
+}
+
+function showInfraStatus() {
+  if (!infra.unit) return;
+  infra.unit.dot.className = 'unit-dot ' + infra.status;
+  infra.unit.dot.title = infra.statusText;
+}
+
+// what the remote shows as address: the loco, the first typed digit or nothing
+function infraDisplay(ch) {
+  const c = infra.channels[ch];
+  if (c.address !== null) return Number(c.address);
+  if (c.digits.length === 1) return P.DISPLAY_PENDING + Number(c.digits[0]);
+  return P.DISPLAY_NONE;
+}
+
+function infraState(ch) {
+  const c = infra.channels[ch];
+  const l = c.address !== null ? store[c.address] || defaultAddressData() : defaultAddressData();
+  return { display: infraDisplay(ch), speed: l.speed, dir: l.dir, functions: FUNCTIONS.map(f => l[f]), stopped };
+}
+
+// the unit shows the remote of the last command, the direction, the address and the functions
+function showInfra(text) {
+  const u = infra.unit;
+  if (!u || u.loading || !u.frame.contentWindow) return;
+  const c = infra.last !== null ? infra.channels[infra.last] : { digits: [], address: null };
+  const l = c.address !== null ? store[c.address] || defaultAddressData() : null;
+  u.frame.contentWindow.postMessage({
+    type: 'marklin-infra',
+    remote: infra.last !== null ? infra.last + 1 : '',
+    digits: c.address !== null ? c.address.split('') : c.digits,
+    dir: l ? !!l.dir : null,
+    functions: FUNCTIONS.map(f => !!(l && l[f])),
+    connected: infra.status === 'ok', // (lock LED: a remote is connected)
+    text,
+  }, '*');
+}
+
+function saveInfraState() {
+  if (!infra.unit) return;
+  infra.unit.state = { channels: infra.channels.map(c => c.address) };
+  scheduleSave();
+}
+
+// a change of a loco made with a remote: like a unit saving it
+function remoteChange(address, changes) {
+  const old = store[address] || defaultAddressData();
+  const next = Object.assign({}, old, changes);
+  store[address] = next;
+  logChanges(address, old, next);
+  sendToUnits({ type: 'marklin-address', address, data: next }, infra.unit);
+  scheduleSave();
+  return next;
+}
+
+function releaseChannel(ch) {
+  const c = infra.channels[ch];
+  if (c.address === null) return;
+  const address = c.address;
+  c.address = null;
+  infra.unit.addresses.delete(address);
+  remoteChange(address, { used: false });
+}
+
+function onRemoteCommand(byte) {
+  if (!infra.unit) return;
+  const { channel: ch, code } = P.parseCommand(byte);
+  const c = infra.channels[ch];
+  const C = P.CMD;
+  let text = `Remote ${ch + 1}  ${P.describeCommand(code)}`;
+  let reply;
+
+  // commands for the selected loco
+  const withLoco = change => {
+    if (c.address === null) {
+      text += '  (no loco selected)';
+      reply = P.encode.notice(ch, true, 0);
+      return;
+    }
+    text += `  (loco ${c.address})`;
+    change(store[c.address] || defaultAddressData());
+  };
+
+  if (code <= 9) {
+    // like the Control 80f: two digits select a loco, a third digit starts a new address
+    if (c.digits.length >= 2) {
+      releaseChannel(ch);
+      c.digits = [];
+    }
+    c.digits.push(String(code));
+    if (c.digits.length === 2) {
+      const address = c.digits.join('');
+      if (store[address] && store[address].used) {
+        c.digits = [];
+        log(`Loco ${address}  in use, not selected by remote ${ch + 1}`);
+        reply = P.encode.address(ch, true, P.DISPLAY_NONE, 1);
+      } else {
+        c.address = address;
+        infra.unit.addresses.add(address);
+        remoteChange(address, { used: true });
+        reply = P.encode.state(ch, true, infraState(ch));
+      }
+    } else {
+      reply = P.encode.address(ch, true, infraDisplay(ch), 0);
+    }
+  } else if (code === C.SLOWER || code === C.FASTER) {
+    withLoco(l => {
+      const next = remoteChange(c.address, { speed: Math.max(0, Math.min(14, l.speed + (code === C.FASTER ? 1 : -1))) });
+      reply = P.encode.speed(ch, true, next.speed, next.dir);
+    });
+  } else if (code === C.DIR) {
+    // like the knob of the Control 80f turned to the left: the loco stops and turns
+    withLoco(l => {
+      const next = remoteChange(c.address, { speed: 0, dir: !l.dir });
+      reply = P.encode.speed(ch, true, next.speed, next.dir);
+    });
+  } else if (code === C.HALT) {
+    // like on the real system: two direction changes, the loco stops at once and keeps its
+    // direction (both are sent, so both are in the output)
+    withLoco(() => {
+      const next = remoteChange(c.address, { speed: 0 });
+      log(`Loco ${c.address}  direction ${next.dir ? '▲' : '▼'}`);
+      log(`Loco ${c.address}  direction ${next.dir ? '▼' : '▲'}`);
+      reply = P.encode.speed(ch, true, next.speed, next.dir);
+    });
+  } else if (code === C.GO || code === C.STOP) {
+    setStopped(code === C.STOP, infra.unit);
+    reply = P.encode.stopgo(ch, true, stopped);
+  } else if (code >= C.FN_ON && code < C.FN_OFF + 5) {
+    const on = code < C.FN_OFF;
+    const f = FUNCTIONS[code - (on ? C.FN_ON : C.FN_OFF)];
+    withLoco(() => {
+      const next = remoteChange(c.address, { [f]: on });
+      reply = P.encode.functions(ch, true, FUNCTIONS.map(x => next[x]));
+    });
+  } else if (code === C.SYNC) {
+    // (connect, other remote on the slider, keep-alive): just the state. The unit shows the
+    // remote that connected, until then it is empty.
+    infraSend(P.encode.state(ch, true, infraState(ch)));
+    if (infra.last === null) {
+      infra.last = ch;
+      showInfra(`Remote ${ch + 1}  connected`);
+    }
+    return;
+  } else {
+    text += '  (not used yet)'; // adr, lock
+    reply = P.encode.notice(ch, true, 1);
+  }
+  infraSend(reply);
+  infra.last = ch;
+  saveInfraState();
+  showInfra(text);
+}
+
+// a loco changed on a unit: the remote that has it selected shows it (normally none, a loco
+// selected on a remote is in use for the units)
+function infraLocoChanged(address) {
+  infra.channels.forEach((c, ch) => {
+    if (c.address !== address) return;
+    const l = store[address];
+    infraPush(P.encode.speed(ch, false, l.speed, l.dir).concat(P.encode.functions(ch, false, FUNCTIONS.map(f => l[f]))));
+  });
+}
+
+// Reset all states: the remotes have no loco selected any more
+function infraReset() {
+  if (!infra.unit) return;
+  infra.channels = [0, 1, 2, 3].map(() => ({ digits: [], address: null }));
+  infra.last = null;
+  saveInfraState();
+  infra.channels.forEach((c, ch) => infraPush(P.encode.state(ch, false, infraState(ch))));
+}
+
+/* the COM port (Bluetooth, incoming) */
+
+function infraSend(bytes) {
+  if (infra.writer) infra.writer.write(Uint8Array.from(bytes)).catch(() => {});
+}
+
+// updates the PC sends by itself: only while the remote is there (no pile up in the COM port)
+function infraPush(bytes) {
+  if (Date.now() - infra.heard < REMOTE_QUIET) infraSend(bytes);
+}
+
+function infraHeard() {
+  infra.heard = Date.now();
+  if (infra.status !== 'ok') infraStatus('ok', 'remote connected');
+}
+
+setInterval(() => {
+  if (infra.status === 'ok' && Date.now() - infra.heard > REMOTE_QUIET) infraStatus('wait', 'remote not connected (COM port open)');
+}, 2000);
+
+// asks for the COM port (needs a click: + Infra Control 80f or ↻ on the unit)
+async function infraChoosePort() {
+  if (!('serial' in navigator)) {
+    infraStatus('bad', 'needs Chrome or Edge (Web Serial) on http://localhost or https');
+    return;
+  }
+  let p;
+  try {
+    p = await navigator.serial.requestPort();
+  } catch (e) {
+    if (!infra.port) infraStatus('none', 'no COM port chosen, click ↻ on the unit');
+    return;
+  }
+  if (infra.unit) infraOpen(p);
+}
+
+// after a reload: the COM port chosen before (no click needed)
+async function infraReopen() {
+  clearTimeout(infra.retryTimer);
+  if (!infra.unit || infra.port || !('serial' in navigator)) return;
+  let ports = [];
+  try { ports = await navigator.serial.getPorts(); } catch (e) {}
+  if (!ports.length) {
+    infraStatus('none', 'no COM port chosen, click ↻ on the unit');
+    return;
+  }
+  infraOpen(ports[ports.length - 1]);
+}
+
+async function infraOpen(p) {
+  await infraClose();
+  try {
+    await p.open({ baudRate: 9600 });
+  } catch (e) {
+    infraStatus('bad', `COM port could not be opened (${e.message})`);
+    return;
+  }
+  if (!infra.unit) {
+    p.close().catch(() => {});
+    return;
+  }
+  infra.port = p;
+  infra.writer = p.writable.getWriter();
+  infra.heard = 0;
+  infraStatus('wait', 'COM port open, waiting for the remote');
+  infra.readDone = infraRead(p);
+}
+
+async function infraRead(p) {
+  while (infra.port === p && p.readable) {
+    const reader = infra.reader = p.readable.getReader();
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        infraHeard();
+        for (const b of value) {
+          if (b & 0x80) onRemoteCommand(b); // (every command byte has the top bit set)
+        }
+      }
+    } catch (e) {
+      await new Promise(resolve => setTimeout(resolve, 200)); // (e.g. a broken byte: read on)
+    } finally {
+      try { reader.releaseLock(); } catch (e) {}
+      if (infra.reader === reader) infra.reader = null;
+    }
+  }
+  // the port is gone (e.g. Bluetooth turned off): open it again when it is back
+  if (infra.port === p) {
+    infraStatus('bad', 'COM port lost, trying again every 5 s');
+    await infraClose();
+    infra.retryTimer = setTimeout(infraReopen, 5000);
+  }
+}
+
+// stop reading, let go of the writer, close (a new open waits until this is done)
+function infraClose() {
+  clearTimeout(infra.retryTimer);
+  const p = infra.port;
+  if (!p) return infra.closing;
+  infra.port = null;
+  infra.closing = (async () => {
+    try { if (infra.reader) await infra.reader.cancel(); } catch (e) {}
+    try { await infra.readDone; } catch (e) {}
+    try { infra.writer.releaseLock(); } catch (e) {}
+    infra.writer = null;
+    try { await p.close(); } catch (e) {}
+  })();
+  return infra.closing;
+}
+
+// the Infra Control is removed: close the port, the remotes are empty again
+function infraDetach() {
+  infraClose();
+  infra.unit = null;
+  infra.channels = [0, 1, 2, 3].map(() => ({ digits: [], address: null }));
+  infra.last = null;
+  infra.status = 'none';
+  infra.statusText = 'no COM port chosen';
+  updateInfraButton();
+}
+
+/* ---------- Units ---------- */
+
+// a new keyboard gets the lowest number no other keyboard has
+function freeKeyboardNumber() {
+  const taken = units.filter(u => u.type === 'keyboard').map(u => u.state.number);
+  for (let n = 1; n <= 16; n++) {
+    if (!taken.includes(n)) return n;
+  }
+  return 1;
+}
+
+// type: '80f', 'keyboard' or 'infra', state: saved state to show (null = start state)
+function createUnit(type, state) {
+  type = cleanType(type);
+  if (type === 'infra' && infra.unit) return null; // only one Infra Control
+  if (type === 'keyboard' && !state) state = { number: freeKeyboardNumber() };
+  const unit = { id: nextUnitId++, type, state: cleanState(type, state), addresses: new Set(), loading: true, anim: null };
+
+  // a Control 80f keeps its loco selected, unless another unit already has it
+  const address = type === '80f' ? unitAddress(unit.state) : null;
+  if (address) {
+    if (store[address] && store[address].used) {
+      unit.state.digits = [];
+      unit.state.arrow = null;
+    } else {
+      store[address] = Object.assign(store[address] || defaultAddressData(), { used: true });
+      unit.addresses.add(address);
+    }
+  }
+  // the remotes of the Infra Control keep their locos the same way
+  if (type === 'infra') {
+    unit.state.channels = unit.state.channels.map(a => {
+      if (a === null || (store[a] && store[a].used)) return null;
+      store[a] = Object.assign(store[a] || defaultAddressData(), { used: true });
+      unit.addresses.add(a);
+      return a;
+    });
+    infra.unit = unit;
+    infra.channels = unit.state.channels.map(a => ({ digits: [], address: a }));
+    infra.last = null; // (the display stays empty until a remote connects)
+  }
+
+  unit.card = document.createElement('div');
+  unit.card.className = 'unit';
+
+  unit.handle = document.createElement('div');
+  unit.handle.className = 'unit-handle';
+  unit.handle.title = 'Drag to move';
+
+  const close = document.createElement('button');
+  close.className = 'unit-close';
+  close.title = 'Remove unit';
+  close.innerHTML = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  close.addEventListener('pointerdown', e => e.stopPropagation()); // no drag
+  close.addEventListener('click', () => removeUnit(unit));
+  unit.handle.appendChild(close);
+
+  // Infra Control: state of the COM port / remote, and a button to choose the COM port again
+  if (type === 'infra') {
+    unit.dot = document.createElement('span');
+    unit.dot.className = 'unit-dot';
+    const reload = document.createElement('button');
+    reload.className = 'unit-close unit-reload';
+    reload.title = 'Choose the COM port of the phone remote again';
+    reload.innerHTML = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M8.6 5.4A3.6 3.6 0 1 1 7.5 2.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M8.3 0.9v2.2H6.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    reload.addEventListener('pointerdown', e => e.stopPropagation()); // no drag
+    reload.addEventListener('click', infraChoosePort);
+    unit.handle.append(unit.dot, reload);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'unit-body';
+  unit.frame = document.createElement('iframe');
+  unit.frame.className = 'unit-frame';
+  unit.frame.title = UNIT_NAMES[type];
+  unit.frame.setAttribute('scrolling', 'no');
+  // give the unit the loco/switch data, STOP/GO and its own saved state every time it (re)loads
+  unit.frame.addEventListener('load', () => {
+    unit.loading = false;
+    unit.frame.contentWindow.postMessage({ type: 'marklin-store', store, switches, stopped, unitState: unit.state }, '*');
+    if (unit.type === 'infra') showInfra();
+  });
+  unit.frame.src = UNIT_PAGES[type];
+  body.appendChild(unit.frame);
+
+  unit.card.append(unit.handle, body);
+  unitsEl.appendChild(unit.card);
+  units.push(unit);
+  applyOrder();
+
+  unit.handle.addEventListener('pointerdown', e => startDrag(e, unit));
+  if (type === 'infra') showInfraStatus();
+  updateInfraButton();
+  scheduleSave();
+  return unit;
+}
+
+function removeUnit(unit) {
+  if (drag) return;
+  releaseAddresses(unit);
+  if (unit === infra.unit) infraDetach();
+  const before = rectsOf(units);
+  units.splice(units.indexOf(unit), 1);
+  unit.card.remove();
+  applyOrder();
+  slideFrom(before);
+  scheduleSave();
+}
+
+function removeAllUnits() {
+  if (infra.unit) infraDetach();
+  units.forEach(u => u.card.remove());
+  units = [];
+}
+
+// log every loco, STOP and switch going back to the start state (before a reset clears them)
+function logBackToStart() {
+  if (stopped) log('GO');
+  Object.keys(store).sort((a, b) => a - b).forEach(address => {
+    logChanges(address, store[address], defaultAddressData());
+  });
+  Object.keys(switches).sort((a, b) => a - b).forEach(address => {
+    if (switches[address] !== 'red') log(`Switch ${address}  red`);
+  });
+}
+
+// all units to the start state (no address selected, knob at 0), all locos to the start state,
+// all switches back to red. Keyboards keep their number (that is their setup, not a state).
+function resetAllStates() {
+  logBackToStart();
+  store = {};
+  switches = {};
+  stopped = false;
+  units.forEach(u => {
+    if (u.type === '80f') u.state = null;
+    u.addresses.clear();
+    u.loading = true;
+    u.frame.src = UNIT_PAGES[u.type]; // reloads the unit
+  });
+  infraReset();
+  log('All states reset');
+  scheduleSave();
+}
+
+// Units are never moved in the DOM (that would reload the iframe and lose its state),
+// the visual order is set with the CSS "order" property instead.
+function applyOrder() {
+  units.forEach((u, i) => { u.card.style.order = i; });
+}
+
+function rectsOf(list) {
+  return new Map(list.map(u => [u, u.card.getBoundingClientRect()]));
+}
+
+// Let units slide from their old place to the new one (FLIP animation)
+function slideFrom(before, skip) {
+  units.forEach(u => {
+    if (u === skip || !before.has(u)) return;
+    if (u.anim) u.anim.cancel();
+    const a = before.get(u);
+    const b = u.card.getBoundingClientRect();
+    const dx = a.left - b.left;
+    const dy = a.top - b.top;
+    if (dx || dy) {
+      u.anim = u.card.animate(
+        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+        { duration: 200, easing: EASE }
+      );
+    }
+  });
+}
+
+/* ---------- Reset cookies, import, export ---------- */
+
+// delete everything saved (also cookies of older versions of this page) and start like on the first visit
+function resetCookies() {
+  if (!confirm('Delete everything saved and start like on the first visit?\n(Use Export first to keep a copy.)')) return;
+  saved.names('c80_').concat(saved.names('addr_'), saved.names('control80f_')).forEach(n => saved.remove(n));
+  saved.remove('stop');
+  try {
+    localStorage.removeItem('control80f_theme');
+    localStorage.removeItem('control80f_scale');
+  } catch (e) {}
+
+  prefs = cleanPrefs(DEFAULT_PREFS);
+  applyTheme();
+  applyScale();
+  saveInput.checked = prefs.save;
+  logBackToStart();
+  removeAllUnits();
+  store = {};
+  switches = {};
+  stopped = false;
+  createUnit('80f');
+  savePrefs();
+  saveAll();
+  log('Cookies reset');
+}
+
+function exportSetup() {
+  const locos = {};
+  Object.keys(store).forEach(address => {
+    const { used, ...loco } = store[address];
+    locos[address] = loco;
+  });
+  const data = {
+    app: 'control80f',
+    version: 2,
+    settings: { theme: prefs.theme, scale: prefs.scale, save: prefs.save },
+    stopped,
+    units: units.map(u => ({ type: u.type, state: u.state })),
+    locos,
+    switches,
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `control80f-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function importSetup(data) {
+  if (!data || data.app !== 'control80f' || !Array.isArray(data.units)) {
+    throw new Error('not a Control 80f export file');
+  }
+  prefs = cleanPrefs(data.settings);
+  applyTheme();
+  applyScale();
+  saveInput.checked = prefs.save;
+
+  removeAllUnits();
+  store = cleanLocos(data.locos);
+  switches = cleanSwitches(data.switches);
+  stopped = !!data.stopped;
+  data.units.map(cleanUnitEntry).forEach(entry => createUnit(entry.type, entry.state));
+  infraReopen();
+
+  savePrefs();
+  if (prefs.save) saveAll();
+  else eraseSavedStates();
+}
+
+document.getElementById('resetCookies').addEventListener('click', resetCookies);
+document.getElementById('exportSetup').addEventListener('click', exportSetup);
+document.getElementById('importSetup').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = ''; // the same file can be chosen again
+  if (!file) return;
+  try {
+    importSetup(JSON.parse(await file.text()));
+    log(`Imported ${file.name}`);
+  } catch (err) {
+    log(`Import failed: ${file.name} is ${err instanceof SyntaxError ? 'not a valid file' : err.message}`);
+  }
+});
+
+/* ---------- Dragging ---------- */
+
+let drag = null;
+
+function startDrag(e, unit) {
+  if (e.button !== 0 || drag) return;
+  e.preventDefault();
+
+  if (unit.anim) unit.anim.cancel();
+  const rowRect = unitsEl.getBoundingClientRect();
+  drag = {
+    unit,
+    pointerId: e.pointerId,
+    x: e.clientX,
+    y: e.clientY,
+    // where inside the card it was grabbed
+    grabX: e.clientX - rowRect.left - unit.card.offsetLeft,
+    grabY: e.clientY - rowRect.top - unit.card.offsetTop,
+    raf: 0,
+  };
+
+  unit.handle.setPointerCapture(e.pointerId);
+  unit.handle.addEventListener('pointermove', onDragMove);
+  unit.handle.addEventListener('pointerup', endDrag);
+  unit.handle.addEventListener('pointercancel', endDrag);
+  unit.handle.addEventListener('lostpointercapture', endDrag);
+  unit.card.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+  drag.raf = requestAnimationFrame(dragFrame);
+}
+
+function onDragMove(e) {
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+}
+
+function dragFrame() {
+  if (!drag) return;
+  autoScroll();
+  positionDragged();
+  drag.raf = requestAnimationFrame(dragFrame);
+}
+
+function positionDragged() {
+  const { unit } = drag;
+  const card = unit.card;
+  const rowRect = unitsEl.getBoundingClientRect();
+
+  // where the card should be (relative to the row), following the pointer
+  const left = drag.x - rowRect.left - drag.grabX;
+  const top = drag.y - rowRect.top - drag.grabY;
+  const cx = left + card.offsetWidth / 2;
+  const cy = top + card.offsetHeight / 2;
+
+  // All units have the same size, so slot i is always where units[i] is laid out.
+  // Move the dragged unit into the slot nearest to its center.
+  let target = 0;
+  let best = Infinity;
+  units.forEach((u, i) => {
+    const dx = u.card.offsetLeft + u.card.offsetWidth / 2 - cx;
+    const dy = u.card.offsetTop + u.card.offsetHeight / 2 - cy;
+    const d = dx * dx + dy * dy;
+    if (d < best) { best = d; target = i; }
+  });
+  if (target !== units.indexOf(unit)) {
+    const before = rectsOf(units);
+    units.splice(units.indexOf(unit), 1);
+    units.splice(target, 0, unit);
+    applyOrder();
+    slideFrom(before, unit);
+    scheduleSave();
+  }
+
+  // offsetLeft/Top ignore transforms, so this keeps the card under the pointer
+  // even after its slot changed
+  card.style.transform = `translate(${left - card.offsetLeft}px, ${top - card.offsetTop}px)`;
+}
+
+// Scroll the page when dragging near the top/bottom edge
+function autoScroll() {
+  const EDGE = 40;
+  const SPEED = 16;
+  let dy = 0;
+  if (drag.y < EDGE) dy = -SPEED * Math.min(1, (EDGE - drag.y) / EDGE);
+  else if (drag.y > innerHeight - EDGE) dy = SPEED * Math.min(1, (drag.y - innerHeight + EDGE) / EDGE);
+  if (dy) window.scrollBy(0, dy);
+}
+
+function endDrag() {
+  if (!drag) return;
+  const { unit, pointerId } = drag;
+  cancelAnimationFrame(drag.raf);
+  drag = null;
+
+  unit.handle.removeEventListener('pointermove', onDragMove);
+  unit.handle.removeEventListener('pointerup', endDrag);
+  unit.handle.removeEventListener('pointercancel', endDrag);
+  unit.handle.removeEventListener('lostpointercapture', endDrag);
+  if (unit.handle.hasPointerCapture(pointerId)) unit.handle.releasePointerCapture(pointerId);
+  document.body.classList.remove('is-dragging');
+
+  // slide from where it was dropped into its slot
+  const from = unit.card.style.transform || 'none';
+  unit.card.style.transform = '';
+  unit.anim = unit.card.animate([{ transform: from }, { transform: 'none' }], { duration: 200, easing: EASE });
+  unit.anim.onfinish = unit.anim.oncancel = () => {
+    if (!drag || drag.unit !== unit) unit.card.classList.remove('dragging');
+  };
+}
+
+/* ---------- Start ---------- */
+
+document.getElementById('add80f').addEventListener('click', () => createUnit('80f'));
+document.getElementById('addKeyboard').addEventListener('click', () => createUnit('keyboard'));
+// the Infra Control asks for the COM port at once (this click allows it)
+addInfraButton.addEventListener('click', () => {
+  if (createUnit('infra')) infraChoosePort();
+});
+document.getElementById('resendStates').addEventListener('click', resendAllStates);
+document.getElementById('resetStates').addEventListener('click', resetAllStates);
+
+// restore the saved setup, or start with one Control 80f
+let setup = null;
+if (prefs.save) {
+  try { setup = JSON.parse(saved.read('c80_setup')); } catch (e) {}
+}
+if (setup && Array.isArray(setup.units)) {
+  store = decodeLocos(saved.read('c80_locos'));
+  switches = decodeSwitches(saved.read('c80_switches'));
+  stopped = !!setup.stopped;
+  setup.units.map(cleanUnitEntry).forEach(entry => createUnit(entry.type, entry.state));
+} else {
+  createUnit('80f');
+}
+updateInfraButton();
+infraReopen(); // (an Infra Control from before: its COM port again)
+// save again so the cookies do not run out (see COOKIE_EXPIRES)
+savePrefs();
+saveAll();
 </script>
 
 </body>

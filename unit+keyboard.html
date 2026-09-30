@@ -589,6 +589,10 @@
         .bolt.tr { top:5mm; right:5mm; }
         .bolt.bl { bottom:5mm; left:5mm; }
         .bolt.br { bottom:5mm; right:5mm; }
+        /* all buttons: pointer cursor */
+        .rButton, .gButton {
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -1017,24 +1021,20 @@
                             });
                         });
                         
-                        // Initialize LEDs: first LED turns on
+                        // Initialize LEDs: show the stored direction of the selected loco
+                        // (used to always switch to "up", so pressing an f button reset the direction)
                         function initializeLEDs() {
                             const led1 = document.getElementById(led1Id);
                             const led2 = document.getElementById(led2Id);
                             if (!led1 || !led2) return console.warn('LED not found');
-                        
-                            // Turn on the first LED
-                            led1.className = led1.dataset.originalClass;
-                            led1.setAttribute('style', led1.dataset.originalStyle);
-                        
-                            // Ensure second LED stays off
-                            led2.className = '';
-                            led2.style.width = '0px';
-                            led2.style.height = '0px';
-                            led2.style.margin = '0px';
-                        
-                            activeLED = 1;
+
                             ledsInitialized = true;
+                            const addrData = window.Address !== undefined ? loadAddressData(Address) : null;
+                            if (addrData && addrData.dir) {
+                                forceDown();
+                            } else {
+                                forceUp();
+                            }
                         }
                         
                         // Toggle LEDs between them
@@ -1400,41 +1400,36 @@
                     }
                 }
                 
-                // Main function:
-                // Loads cookie or creates one with defaults
-                function loadAddressData(address) {
-                    const cookieName = `addr_${address}`;
-                    let data = getCookie(cookieName);
-                
-                    if (data) {
-                        // cookie exists → decode it
-                        const parsed = decodeData(data);
-                        if (parsed) {
-                            return parsed;   // return loaded values
-                        }
-                    }
-                
-                    // cookie does NOT exist → create default data
-                    const defaultData = {
+                // Loco data is kept in memory and saved in cookies.
+                // Cookies do not work when the page is opened as a file (file://),
+                // without the memory copy every read returned the default data (direction reset).
+                const addressCache = {};
+
+                function defaultAddressData() {
+                    return {
                         speed: 0,
-                        direction: false,
+                        dir: false,
                         f0: false,
                         f1: false,
                         f2: false,
                         f3: false,
                         f4: false
                     };
-                
-                    // write cookie
-                    setCookie(cookieName, encodeData(defaultData));
-                
-                    return defaultData;
+                }
+
+                // Main function: returns the data of an address (defaults if there is none yet)
+                function loadAddressData(address) {
+                    const parsed = decodeData(getCookie(`addr_${address}`));
+                    if (parsed) {
+                        return Object.assign(defaultAddressData(), parsed);
+                    }
+                    return Object.assign(defaultAddressData(), addressCache[address]);
                 }
                 
-                // Save updated values back to cookie
+                // Save updated values
                 function saveAddressData(address, dataObj) {
-                    const cookieName = `addr_${address}`;
-                    setCookie(cookieName, encodeData(dataObj));
+                    addressCache[address] = Object.assign({}, dataObj);
+                    setCookie(`addr_${address}`, encodeData(dataObj));
                 }
                 </script>
                 <script>

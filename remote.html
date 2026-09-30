@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>IR-control</title>
+    <script>
+        // Embedded in control.html: no background, no scrollbars, control.html keeps the switch states
+        const EMBEDDED = window.self !== window.top;
+        if (EMBEDDED) document.documentElement.classList.add('embedded');
+    </script>
+
+    <style>
+        body {
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            height:100vh;
+            margin:0;
+            background:lightgray;
+            font-family:Arial, sans-serif;
+        }
+        html.embedded, html.embedded body {
+            background:transparent;
+            overflow:hidden;
+        }
+        html.embedded .frame {
+            width:auto;
+            height:auto;
+        }
+        html.embedded .outer-frame {
+            /* the outer shadow would be cut off by the iframe, control.html draws it instead */
+            box-shadow: inset 0 0 3mm rgba(0,0,0,0.25);
+        }
+
+        .LED{
+		    top:2mm;
+			right: 0.7cm;
+            width:3mm;
+            height: 3mm;
+            position:absolute;
+            background:red;
+            border-radius:50%;
+            margin:2px;
+            box-shadow:
+                0 0mm 3mm rgba(255,0,0,1),
+                inset 0 0mm 1.2mm rgba(0,0,0,1.25);
+        }
+
+
+        .address{
+            user-select: none;
+            margin-left:1.3mm;
+            margin-right:1.3mm;
+            float: left;
+            color:white;
+            z-index:200;
+        }
+
+
+        .frame{
+            user-select: none;
+            width: 450px;
+            height:450px;
+            display: table-cell;
+        }
+        .outer-frame {
+            user-select: none;
+            width:5.9cm;
+            height:13.8cm;
+            background:#ffffff;
+            border-radius:4mm 4mm 7mm 7mm;
+            position:relative;
+            box-shadow:
+                0 2mm 4mm rgba(0,0,0,0.25),
+                inset 0 0 3mm rgba(0,0,0,0.25);
+        }
+        .underscore{
+            font-family:Consolas;
+            font-size:7.5px;
+            position: relative;
+            top:-0.9px;
+            padding:1px;
+        }
+		.label1{
+            color: white;
+            position:absolute;
+            left:7mm;
+            top:3.3cm;
+            width:3.6cm;
+            height:0.6cm;
+            font-size:4pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+        }
+        .label2{
+            color: white;
+            position:absolute;
+            right:10mm;
+            top:8mm;
+            width:1.3cm;
+            height:0.4cm;
+            font-size:13pt;
+            font-family:"Marklin", Roboto,"Courier New", arial;
+            font-weight: 900;
+            z-index:1;
+        }
+        .label3{
+            color: white;
+            position:absolute;
+            right:10mm;
+            top:16mm;
+            width:1.3cm;
+            height:0.4cm;
+            font-size:3pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+        }
+		.label4{
+		    width: min-content;
+            text-align: center; 
+            color: white;
+            position:absolute;
+            right:17.5mm;
+            top:2.5cm;
+            width:0.1cm;
+            height:0.6cm;
+            font-size:5pt;
+            font-family:"Starch Slab","Courier New", arial;
+            z-index:1;
+        }
+        .inner-frame {
+            width:5.0cm;
+            height:13.4cm;
+            background:#000;
+            border-radius:0mm 0mm 5mm 5mm;
+            position:absolute;
+            left:50%;
+            transform:translateX(-50%);
+            top:0mm;
+            box-shadow:
+                0 1mm 1mm rgba(0,0,0,0.35),
+                inset 0 0 1mm rgba(150,150,150,1.95);
+        }
+		.top-bar {
+			height:0.9cm;
+			background-color: #000;
+			border-style: inset none inset none;
+			border-width: 1px;
+			border-color: #000;
+			position: relative;
+			box-shadow:
+                0 1mm 1mm rgba(0,0,0,0.35),
+                inset 0 0 1mm rgba(150,150,150,1.95);
+		}
+		.button-container {
+		    position: relative;
+		    background-color: red;
+			height: 1cm;
+			float: bottom;
+			margin-top:0cm;
+			bottom: 0;
+		}
+		.button-row {
+		    position: relative;
+		    background-color: transoarent;
+			height: 0.5cm;
+			float: bottom;
+			margin-top:0cm;
+			bottom: 0;
+			margin-right: 0.25cm;
+			margin-left: 0.25cm;
+			overflow:hidden;
+			display: flex;
+			
+		}
+		.text-row {
+		    position: relative;
+		    background-color: transparent;
+			height: 0.5cm;
+			float: bottom;
+			margin-top:0cm;
+			bottom: 0;
+			margin-right: 0.25cm;
+			margin-left: 0.25cm;
+			overflow:hidden;
+			display: flex;
+		}
+		.spacer {
+		    position: relative;
+		    background-color: transparent;
+			height: 1.2cm;
+			float: bottom;
+			margin-top:0cm;
+			bottom: 0;
+		}
+		.chanel {
+		    position: relative;
+		    background-color: orange;
+			height: 1.2cm;
+			width: 0.5cm;
+			left:3.8cm;
+			margin-top:1.6cm;
+			bottom: 0;
+		}
+		.slider {
+		    width:0.5cm;
+			background-color: #141414;
+			height:1.2cm;
+		    writing-mode: vertical-lr;
+			margin:0;
+			padding:0;
+			
+			-webkit-appearance: none;
+			
+		}
+		.slider::-webkit-slider-thumb:hover {
+		   background:
+              linear-gradient(darkred, darkred) center / 0.5cm 0.1cm no-repeat, #cf0202; 
+         }
+		.slider::-webkit-slider-thumb {
+		   -webkit-appearance: none;
+		   appearance: none;
+		    position:relative;
+			right:0.1cm;
+			background: red;
+			cursor: pointer;
+			width: 0.5cm;
+			height: 0.5cm;
+			border-radius:2px;
+			margin:0;
+			padding:0;
+			background:
+              linear-gradient(#cf0202, #cf0202) center / 0.5cm 0.1cm no-repeat, red;  
+		}
+		
+		.slider::-webkit-slider-runnable-track {
+		    background-color:#212121;
+			margin:0;
+			padding:0;
+			width:0.3cm;
+			
+		}
+		.gButton:active{
+		    color: gray;
+            background: #004a14;
+            box-shadow:
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .gButton{
+		    display: grid;
+		    font-size:9pt;
+            font-family:"Courier New", arial;
+			font-weight: bold;
+		    color: white;
+		    text-align: center;
+			justify-content: center;
+			align-items: center;
+			place-items: center;
+		    margin-right:0.5cm;
+            position:relative;
+            top:0mm;
+            width:5mm;
+            min-width:5mm;
+            height:5mm;
+            border-radius:0.5mm;
+            background: #008f1d;
+            float: left; 
+            box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 2mm rgba(0,0,0,0.55);
+        }
+		.rButton:active{
+            background: #960800; 
+            box-shadow:
+                inset 0 0 1mm rgba(0,0,0,0.75);
+        }
+        .rButton{
+		    margin-right:0.5cm;
+            position:relative;
+            top:0mm;
+            width:5mm;
+            min-width:5mm;
+            height:5mm;
+            border-radius:0.5mm;
+            background: red;
+            float: left; 
+            box-shadow:
+                0 1mm 1mm rgba(100,100,100,0.55),
+                inset 0 0 2mm rgba(0,0,0,0.65);
+        }
+		.dummy{
+		    padding-top: 0.07cm;
+		    display: grid;
+		    font-size:6pt;
+            font-family:"Starch Slab","Courier New", arial;
+			font-weight: 600;
+		    color: white;
+		    text-align: center;
+			justify-content: center;
+			align-items: center;
+			place-items: center;
+		    margin-right:0.5cm;
+            position:relative;
+            top:0mm;
+            width:5mm;
+            min-width:5mm;
+            height:5mm;
+            border-radius:0.5mm;
+            background: #000;
+            float: left; 
+        }
+		
+
+
+    /* ---------- settings strip (right side), LED off, phone layout ---------- */
+        /* the page is exactly the visible area (100dvh = without the browser bar), so nothing can scroll */
+        html, body { overflow: hidden; overscroll-behavior: none; }
+        body { height: 100vh; height: 100dvh; }
+        #fit { position: relative; display: flex; gap: 4px; }   /* remote + strip, scaled to the screen (fitToScreen) */
+        /* grip on the left edge of the strip: drag right to hide the strip, left (or tap) to show it again */
+        .grip {
+            position: absolute;
+            z-index: 1;
+            left: 0;
+            top: var(--grip-y, 50%);   /* beside the middle of the speed bar (set in fitToScreen) */
+            width: 11px;
+            height: 2cm;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .grip::before {
+            content: "";
+            width: 3px;
+            height: 30px;
+            border-radius: 2px;
+            background: #c4c4c4;
+            transition: background 0.15s, height 0.15s;
+        }
+        .grip:hover::before, .grip.dragging::before { background: #888; height: 40px; }
+        .grip.dragging { cursor: grabbing; }
+        /* hidden: the remote is in the middle, only a thin sliver of the strip stands out at the right edge */
+        #fit.strip-hidden .frame { margin: 0 auto; }
+        #fit.strip-hidden .strip {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 8px;
+            height: auto;
+            padding: 0;
+            border-radius: 8px 0 0 8px;
+            box-shadow: 0 1mm 3mm rgba(0,0,0,0.25), inset 0 0 1mm rgba(0,0,0,0.12);
+        }
+        #fit.strip-hidden .strip > :not(.grip) { display: none; }
+        #fit.strip-hidden .grip { inset: 0; width: auto; height: auto; transform: none; }
+        .frame { width: auto; height: auto; }   /* the remote itself decides its size (fits next to the strip) */
+        .gButton, .rButton {
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .LED.off {
+            background: #3a0505;
+            box-shadow: inset 0 0 1.2mm rgba(0,0,0,1);
+        }
+        /* narrow strip: link, 80f style address display, speed LEDs, function LEDs, settings */
+        .strip {
+            position: relative;
+            transition: transform 0.18s ease, opacity 0.18s ease;
+            box-sizing: border-box;
+            width: 1.65cm;
+            height: 13.8cm;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+            padding: 6px 6px 6px 11px;   /* contents a bit narrower: the left 11px are the lane of the grip */
+            border-radius: 4mm;
+            background: #fff;
+            box-shadow: 0 2mm 4mm rgba(0,0,0,0.25), inset 0 0 3mm rgba(0,0,0,0.12);
+            color: #222;
+            font: 10px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            user-select: none;
+        }
+        .strip-top { display: flex; align-items: center; gap: 3px; padding-top: 1px; }
+        .link { flex: none; width: 8px; height: 8px; margin-left: 0; border-radius: 50%; background: #c4c4c4; }
+        /* channel 1-4 (same as the slider), like the function tags: active one green, tap to switch */
+        .chans { flex: 1; display: flex; gap: 1px; }
+        .chans span {
+            flex: 1;
+            padding: 1px 0;
+            border-radius: 3px;
+            background: #eee;
+            color: #888;
+            font-size: 9px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+        }
+        .chans span.on { background: #2e7d32; color: #fff; }
+        .link.ok { background: #2e7d32; }
+        .link.wait { background: #f9a825; }
+        .link.bad { background: #e53935; }
+        .strip-buttons { display: flex; flex-direction: column; gap: 3px; }
+        .strip button {
+            flex: 1;
+            min-width: 0;
+            padding: 4px 0;
+            border: 1px solid #c4c4c4;
+            border-radius: 5px;
+            background: #fff;
+            color: inherit;
+            font: 600 10px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .strip button:active { background: #e8e8e8; }
+        .small { color: #888; font-size: 9px; text-align: center; min-height: 11px; }
+        .notice { color: #c62828; font-size: 9px; text-align: center; min-height: 22px; }
+
+        /* address + direction in green (80f digits, no box, no glow) */
+        .display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            height: 0.8cm;
+        }
+        .display .digit {
+            width: 0.42cm;
+            color: #2e7d32;
+            font-family: "seven segment";
+            font-size: 0.62cm;
+            font-style: italic;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -1px;
+            text-align: center;
+            transform: scaleX(1.2);
+        }
+        .display .arrows { position: relative; width: 0.24cm; height: 0.5cm; margin-left: 2px; }
+        .display svg { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; }
+        .display svg path { fill: #2e7d32; }
+        .display svg.on { visibility: visible; }
+
+        /* speed (vertical bar, fills from the bottom) with the functions beneath it */
+        .speedbar {
+            align-self: center;
+            position: relative;
+            width: 8px;
+            height: 3.2cm;
+            overflow: hidden;
+            border-radius: 4px;
+            background: #e6e6e6;
+        }
+        .speedbar > div {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 0;
+            background: #2e7d32;
+            transition: height 0.15s;
+        }
+        .fns { display: flex; flex-direction: column; gap: 3px; }
+        .fns span {
+            padding: 2px 0;
+            border-radius: 4px;
+            background: #eee;
+            color: #888;
+            font-size: 10px;
+            text-align: center;
+        }
+        .fns span.on { background: #2e7d32; color: #fff; }
+
+        .settings { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+        /* on/off buttons for the settings: grey = off, green = on (like the function tags) */
+        .strip .toggle {
+            flex: none;
+            padding: 6px 0;
+            border: 0;   /* (the full width for the text: "screen on" fits in one line) */
+            background: #eee;
+            color: #888;
+            line-height: 1.15;
+            white-space: normal;
+        }
+        .strip .toggle.on { background: #2e7d32; color: #fff; }
+    </style>
+</head>
+
+<body>
+    <div id="fit">
+    <div class="frame">
+        <div class="outer-frame">
+            
+            <p class="label2">märklin</p>
+            <p class="label3">DIGITAL<span class="underscore">_________</span>H0</p>
+			<p class="label1">IR-control</p>
+			<p class="label4">1 2 3 4</p>
+            <div class="inner-frame">
+                <div class="top-bar">
+				   <div class="LED" id="led">
+			       </div>
+			    </div>
+				<div class="chanel">
+				  
+				       <input class="slider" id="channel" type="range" min="1" max="4" value="1" step="1" />
+				 
+				</div>
+				<div class="spacer"></div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy">
+					       <svg width="1.75em" height="0.7em" viewBox="0 0 25 10" aria-hidden="true">
+                           <polygon points="0,0 0,10 25,10" fill="white"/>
+                           </svg>
+					   </div>
+					   <div class="dummy">◄ ►</div>
+					   <div class="dummy">
+					       <svg width="1.75em" height="0.7em" viewBox="0 0 25 10" aria-hidden="true">
+                           <polygon points="0,10 25,0 25,10" fill="white"/>
+                           </svg>
+					   </div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="dummy"></div>
+					   <div class="gButton" data-cmd="slower"></div>
+					   <div class="gButton" data-cmd="dir"></div>
+					   <div class="gButton" data-cmd="faster"></div>
+					   <div class="dummy"></div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy">go</div>
+					   <div class="dummy"></div>
+					   <div class="dummy">halt</div>
+					   <div class="dummy"></div>
+					   <div class="dummy">stop</div>
+				   </div>
+				   <div class="button-row">
+				       <div class="gButton" data-cmd="go"></div>
+					   <div class="dummy"></div>
+					   <div class="gButton" data-cmd="halt"></div>
+					   <div class="dummy"></div>
+					   <div class="rButton" data-cmd="stop"></div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="gButton" data-cmd="fon0">+</div>
+					   <div class="gButton" data-cmd="fon1">+</div>
+					   <div class="gButton" data-cmd="fon2">+</div>
+					   <div class="gButton" data-cmd="fon3">+</div>
+					   <div class="gButton" data-cmd="fon4">+</div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy">func</div>
+					   <div class="dummy">f1</div>
+					   <div class="dummy">f2</div>
+					   <div class="dummy">f3</div>
+					   <div class="dummy">f4</div>
+				   </div>
+				   <div class="button-row">
+				       <div class="gButton" data-cmd="foff0">-</div>
+					   <div class="gButton" data-cmd="foff1">-</div>
+					   <div class="gButton" data-cmd="foff2">-</div>
+					   <div class="gButton" data-cmd="foff3">-</div>
+					   <div class="gButton" data-cmd="foff4">-</div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="dummy"></div>
+					   <div class="gButton" data-cmd="d1">1</div>
+					   <div class="gButton" data-cmd="d2">2</div>
+					   <div class="gButton" data-cmd="d3">3</div>
+					   <div class="dummy"></div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="dummy"></div>
+					   <div class="gButton" data-cmd="d4">4</div>
+					   <div class="gButton" data-cmd="d5">5</div>
+					   <div class="gButton" data-cmd="d6">6</div>
+					   <div class="dummy"></div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="dummy"></div>
+					   <div class="gButton" data-cmd="d7">7</div>
+					   <div class="gButton" data-cmd="d8">8</div>
+					   <div class="gButton" data-cmd="d9">9</div>
+					   <div class="dummy"></div>
+				   </div>
+				</div>
+				<div class="button-containter">
+				   <div class="text-row">
+				       <div class="dummy"></div>
+					   <div class="dummy">adr</div>
+					   <div class="dummy"></div>
+					   <div class="dummy">lock</div>
+					   <div class="dummy"></div>
+				   </div>
+				   <div class="button-row">
+				       <div class="dummy"></div>
+					   <div class="rButton" data-cmd="adr"></div>
+					   <div class="gButton" data-cmd="d0">0</div>
+					   <div class="rButton" data-cmd="lock"></div>
+					   <div class="dummy"></div>
+				   </div>
+				</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- settings / info strip next to the remote -->
+    <aside class="strip">
+        <div class="grip" id="grip" title="Drag right to hide the info bar, left (or tap) to show it"></div>
+        <div class="strip-top">
+            <span class="link" id="link" title="not connected"></span>
+            <span class="chans" id="chans" title="channel (remote 1-4)"></span>
+        </div>
+        <div class="strip-buttons">
+            <button id="connect" title="Choose the PC (Bluetooth serial port)">Connect</button>
+            <button id="reconnect" title="Reconnect">↻</button>
+        </div>
+        <div class="small" id="rtt">offline</div>
+
+        <!-- address + direction, like the display of the Control 80f -->
+        <div class="display" title="selected loco">
+            <div class="digit" id="digit1"></div>
+            <div class="digit" id="digit2"></div>
+            <div class="arrows">
+                <svg id="arrowUp" viewBox="0 0 100 200" aria-hidden="true"><path d="M50,15 L90,185 L10,185 Z" fill="red"/></svg>
+                <svg id="arrowDown" viewBox="0 0 100 200" aria-hidden="true"><path d="M50,185 L10,15 L90,15 Z" fill="red"/></svg>
+            </div>
+        </div>
+        <div class="notice" id="notice"></div>
+
+        <!-- speed 0-14 (bar fills from the bottom), the functions beneath it -->
+        <div class="speedbar" title="speed"><div id="speedFill"></div></div>
+        <div class="fns" id="fns"></div>
+
+        <div class="settings">
+            <button class="toggle" id="vibrate" title="Short vibration on every button press">Vibrate</button>
+            <button class="toggle" id="awake" title="Keep the phone screen on while connected">Keep screen on</button>
+            <button class="toggle" id="auto" title="Connect to the PC by itself (on start and after the connection was lost)">Auto connect</button>
+            <button class="toggle" id="full" title="Hide the browser's address bar (full screen)">Full screen</button>
+        </div>
+    </aside>
+    </div>
+
+    <script src="remote-protocol.js"></script>
+    <script>
+        // Phone remote. Every button press is 1 byte to the PC (see remote-protocol.js) and the PC
+        // answers each one. The remote keeps no loco data: the PC knows which loco each of the
+        // 4 channels (slider) has selected, the strip only shows what the PC sends back.
+        const P = RemoteProtocol;
+        const $ = id => document.getElementById(id);
+
+        const BUTTONS = {
+            slower: P.CMD.SLOWER, dir: P.CMD.DIR, faster: P.CMD.FASTER,
+            go: P.CMD.GO, halt: P.CMD.HALT, stop: P.CMD.STOP, adr: P.CMD.ADR, lock: P.CMD.LOCK,
+        };
+        for (let d = 0; d <= 9; d++) BUTTONS['d' + d] = P.CMD.DIGIT + d;
+        for (let f = 0; f < 5; f++) {
+            BUTTONS['fon' + f] = P.CMD.FN_ON + f;
+            BUTTONS['foff' + f] = P.CMD.FN_OFF + f;
+        }
+        const REPEAT = new Set(['slower', 'faster']); // held down: repeat
+        const REPLY_TIMEOUT = 1500;
+        const KEEP_ALIVE = 5000;
+
+        // settings of this phone (and its channel), kept in a cookie "forever": browsers shorten the
+        // expiry (Chrome: 400 days), so it is written again on every visit. localStorage as well,
+        // because cookies do not work on file://
+        const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '') || '/';
+        const COOKIE_EXPIRES = 'Fri, 31 Dec 9999 23:59:59 GMT';
+        const prefs = { vibrate: true, awake: true, auto: true, full: false, channel: 1, strip: true };
+        function loadPrefs() {
+            const cookie = document.cookie.match(/(?:^|;\s*)remote_prefs=([^;]*)/);
+            let text = cookie ? decodeURIComponent(cookie[1]) : null;
+            try { text = text || localStorage.getItem('remotePrefs'); } catch (e) {}
+            try { Object.assign(prefs, JSON.parse(text) || {}); } catch (e) {}
+            prefs.channel = Math.min(4, Math.max(1, Math.round(prefs.channel) || 1));
+        }
+        function savePrefs() {
+            const text = JSON.stringify(prefs);
+            document.cookie = `remote_prefs=${encodeURIComponent(text)}; expires=${COOKIE_EXPIRES}; path=${COOKIE_PATH}; SameSite=Lax`;
+            try { localStorage.setItem('remotePrefs', text); } catch (e) {}
+        }
+        loadPrefs();
+        savePrefs();
+        $('channel').value = prefs.channel;
+
+        ['vibrate', 'awake', 'auto', 'full'].forEach(k => {
+            const button = $(k);
+            const show = () => {
+                button.classList.toggle('on', !!prefs[k]);
+                button.setAttribute('aria-pressed', prefs[k] ? 'true' : 'false');
+            };
+            show();
+            button.addEventListener('click', () => {
+                prefs[k] = !prefs[k];
+                show();
+                savePrefs();
+                if (k === 'awake') keepAwake();
+                if (k === 'full') fullScreen();
+                if (k === 'vibrate' && prefs.vibrate && navigator.vibrate) navigator.vibrate(12);
+                if (k === 'auto') {
+                    retryCount = 0;
+                    if (prefs.auto) manualOff = false;
+                    if (prefs.auto && state === 'idle' && 'serial' in navigator) reconnect();
+                    if (!prefs.auto) clearTimeout(retryTimer);
+                }
+            });
+        });
+
+        // full screen hides the browser's address bar. Chrome allows it only during a tap, so when it
+        // is on (after a reload, or after leaving it with the back gesture) the next tap enters it
+        function fullScreen() {
+            const page = document.documentElement;
+            if (!page.requestFullscreen) return;
+            if (prefs.full && !document.fullscreenElement) page.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+            else if (!prefs.full && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        }
+        document.addEventListener('pointerup', e => { if (e.target.id !== 'full') fullScreen(); });
+
+        let channel = Number($('channel').value) - 1;
+
+        // channel tags 1-4 next to the link dot (tap = move the slider there)
+        for (let c = 1; c <= 4; c++) {
+            const tag = document.createElement('span');
+            tag.textContent = c;
+            tag.addEventListener('click', () => {
+                if (Number($('channel').value) === c) return;
+                $('channel').value = c;
+                $('channel').dispatchEvent(new Event('input'));
+            });
+            $('chans').appendChild(tag);
+        }
+        const view = { display: P.DISPLAY_NONE, speed: 0, dir: false, functions: [false, false, false, false, false], stopped: false };
+        let connected = false;
+
+        // function tags (func, f1-f4), green while on
+        P.FUNCTION_NAMES.forEach(name => {
+            const tag = document.createElement('span');
+            tag.textContent = name;
+            $('fns').appendChild(tag);
+        });
+
+        // remote + strip as big as the screen allows (small margins left and right). With the strip
+        // hidden the remote is in the middle and the strip's sliver at the right edge of the screen.
+        function fitToScreen() {
+            const fit = $('fit');
+            const margin = 4;
+            fit.style.zoom = 1;
+            fit.style.width = '';
+            if (fit.classList.contains('strip-hidden')) {
+                const frame = document.querySelector('.frame');
+                const side = strip.offsetWidth + margin; // room for the sliver, on both sides (centered)
+                const scale = Math.max(0.5, Math.min((innerWidth - 2 * margin) / (frame.offsetWidth + 2 * side), (innerHeight - 2 * margin) / frame.offsetHeight));
+                fit.style.zoom = scale;
+                fit.style.width = innerWidth / scale + 'px'; // as wide as the screen: the sliver touches its edge
+            } else {
+                const scale = Math.max(0.5, Math.min((innerWidth - 2 * margin) / fit.offsetWidth, (innerHeight - 2 * margin) / fit.offsetHeight));
+                fit.style.zoom = scale;
+                // the grip beside the middle of the speed bar (measured zoomed: the rounding differs)
+                const bar = document.querySelector('.speedbar').getBoundingClientRect();
+                strip.style.setProperty('--grip-y', (bar.top + bar.height / 2 - strip.getBoundingClientRect().top) / scale + 'px');
+            }
+        }
+
+        // grip on the left edge of the strip: drag the strip to the right to hide it (a thin sliver
+        // stays at the edge of the screen and the remote gets bigger), drag the sliver back to the
+        // left or tap it to show the strip again
+        const strip = document.querySelector('.strip');
+        let stripX = 0; // current shift of the strip (zoomed pixels)
+        function slide(x, opacity, animate) {
+            stripX = x;
+            strip.style.transition = animate ? '' : 'none';
+            strip.style.transform = x ? `translateX(${x}px)` : '';
+            strip.style.opacity = opacity === 1 ? '' : opacity;
+            if (!animate) strip.offsetWidth; // (so a following animated slide starts from here)
+        }
+        let stripTimer = 0;
+        function showStrip(show) {
+            prefs.strip = show;
+            savePrefs();
+            clearTimeout(stripTimer);
+            const fit = $('fit');
+            if (show) {
+                fit.classList.remove('strip-hidden');
+                fitToScreen();
+                slide(strip.offsetWidth, 0, false); // from the right...
+                slide(0, 1, true);                  // ...into place
+            } else {
+                // to the edge of the screen, then it becomes the sliver
+                const zoom = parseFloat(fit.style.zoom) || 1;
+                const left = strip.getBoundingClientRect().left - stripX * zoom;
+                slide((innerWidth - left) / zoom, 0.4, true);
+                stripTimer = setTimeout(() => {
+                    fit.classList.add('strip-hidden');
+                    fitToScreen();
+                    slide(strip.offsetWidth, 1, false);
+                    slide(0, 1, true);
+                }, 180);
+            }
+        }
+        if (!prefs.strip) $('fit').classList.add('strip-hidden');
+        addEventListener('resize', fitToScreen);
+        fitToScreen();
+        document.fonts.ready.then(fitToScreen);
+
+        let drag = null;
+        $('grip').addEventListener('pointerdown', e => {
+            $('grip').setPointerCapture(e.pointerId);
+            $('grip').classList.add('dragging');
+            // (the strip moves in zoomed pixels, the finger in screen pixels)
+            drag = { x: e.clientX, dx: 0, zoom: parseFloat($('fit').style.zoom) || 1, width: strip.offsetWidth };
+        });
+        $('grip').addEventListener('pointermove', e => {
+            if (!drag) return;
+            drag.dx = (e.clientX - drag.x) / drag.zoom;
+            if (prefs.strip) {
+                const x = Math.max(0, Math.min(drag.width, drag.dx));
+                slide(x, 1 - x / drag.width * 0.5, false);
+            } else {
+                slide(Math.max(-12, Math.min(0, drag.dx)), 1, false); // the sliver follows a little
+            }
+        });
+        function endDrag() {
+            if (!drag) return;
+            const { dx, width } = drag;
+            drag = null;
+            $('grip').classList.remove('dragging');
+            const tap = Math.abs(dx) < 5;
+            if (prefs.strip) {
+                if (tap || dx > width / 3) showStrip(false);
+                else slide(0, 1, true); // back in place
+            } else if (tap || dx < -15) {
+                showStrip(true);
+            } else {
+                slide(0, 1, true);
+            }
+        }
+        $('grip').addEventListener('pointerup', endDrag);
+        $('grip').addEventListener('pointercancel', endDrag);
+
+        /* ---------- display ---------- */
+
+        let noticeTimer = 0;
+        function notice(text) {
+            $('notice').textContent = text;
+            clearTimeout(noticeTimer);
+            noticeTimer = setTimeout(() => { $('notice').textContent = ''; }, 2500);
+        }
+
+        // link dot + short status under the buttons (the answer time while all is well)
+        function setLink(state, text) {
+            $('link').className = 'link' + (state ? ' ' + state : '');
+            $('link').title = text;
+            if (state !== 'ok') $('rtt').textContent = text;
+        }
+
+        function render() {
+            const hasLoco = view.display < P.DISPLAY_PENDING;
+            const pending = view.display >= P.DISPLAY_PENDING && view.display < P.DISPLAY_PENDING + 10;
+            [...$('chans').children].forEach((tag, i) => tag.classList.toggle('on', i === channel));
+            // like the 80f: both digits, only the first while typing, nothing without a loco
+            const digits = hasLoco ? String(view.display).padStart(2, '0') : pending ? String(view.display - P.DISPLAY_PENDING) : '';
+            $('digit1').textContent = digits[0] || '';
+            $('digit2').textContent = digits[1] || '';
+            $('arrowUp').classList.toggle('on', hasLoco && !view.dir);
+            $('arrowDown').classList.toggle('on', hasLoco && view.dir);
+            $('speedFill').style.height = hasLoco ? (view.speed / 14 * 100) + '%' : '0';
+            [...$('fns').children].forEach((tag, i) => tag.classList.toggle('on', hasLoco && view.functions[i]));
+            // the red LED of the remote shows GO like on the Control 80f (off = STOP or no connection)
+            $('led').classList.toggle('off', !connected || view.stopped);
+            // Connect (choose the PC) turns into Close while connected
+            $('connect').textContent = state === 'open' ? 'Close' : 'Connect';
+            $('connect').title = state === 'open' ? 'Close the connection to the PC (before reloading or leaving the page)' : 'Choose the PC (Bluetooth serial port)';
+        }
+
+        /* ---------- sending ---------- */
+
+        let writer = null;
+        const waiting = []; // send time of every command that has no reply yet
+        let lastSend = 0;
+        let lastReply = 0;  // last message from the PC
+
+        function send(code) {
+            if (!writer) {
+                notice('offline');
+                return;
+            }
+            if (waiting.length >= 8) { // (no answers: do not pile up writes on a dead link)
+                notice('no answer');
+                return;
+            }
+            waiting.push(performance.now());
+            lastSend = Date.now();
+            writer.write(Uint8Array.of(P.command(channel, code))).catch(() => lost());
+        }
+
+        function press(name) {
+            if (prefs.vibrate && navigator.vibrate) navigator.vibrate(12);
+            send(BUTTONS[name]);
+        }
+
+        let repeatTimer = 0;
+        document.querySelectorAll('[data-cmd]').forEach(el => {
+            const name = el.dataset.cmd;
+            el.addEventListener('pointerdown', () => {
+                clearTimeout(repeatTimer);
+                press(name);
+                if (REPEAT.has(name)) {
+                    repeatTimer = setTimeout(function again() {
+                        press(name);
+                        repeatTimer = setTimeout(again, 200);
+                    }, 450);
+                }
+            });
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => el.addEventListener(t, () => clearTimeout(repeatTimer)));
+        });
+
+        // the slider picks the channel (remote 1-4); ask the PC what that channel has selected
+        $('channel').addEventListener('input', () => {
+            channel = Number($('channel').value) - 1;
+            prefs.channel = channel + 1;
+            savePrefs();
+            view.display = P.DISPLAY_NONE;
+            render();
+            if (writer) send(P.CMD.SYNC);
+        });
+
+        /* ---------- receiving ---------- */
+
+        const decode = P.createDecoder(msg => {
+            lastReply = Date.now();
+            if (msg.reply) {
+                const sent = waiting.shift();
+                if (sent !== undefined) $('rtt').textContent = `${Math.round(performance.now() - sent)} ms`;
+                setLink('ok', 'connected');
+                retryCount = 0; // the PC answers: after the next loss retry soon again
+            }
+            if (msg.type === P.MSG.STOPGO) {
+                view.stopped = msg.stopped;
+            } else if (msg.channel === channel) { // (a late answer for a channel we just left is not shown)
+                if (msg.type === P.MSG.ADDRESS) {
+                    view.display = msg.display;
+                    if (msg.rejected) notice('loco in use');
+                } else if (msg.type === P.MSG.SPEED) {
+                    view.speed = msg.speed;
+                    view.dir = msg.dir;
+                } else if (msg.type === P.MSG.FUNCTIONS) {
+                    view.functions = msg.functions;
+                } else if (msg.type === P.MSG.STATE) {
+                    Object.assign(view, { display: msg.display, speed: msg.speed, dir: msg.dir, functions: msg.functions, stopped: msg.stopped });
+                } else if (msg.type === P.MSG.NOTICE) {
+                    notice(msg.unsupported ? 'not yet' : 'no loco');
+                }
+            }
+            render();
+        });
+
+        // no answer in time: tell it. Keep-alive while idle. No message from the PC for a long
+        // time: the link is dead even if Bluetooth did not notice, so close it and connect again.
+        setInterval(() => {
+            if (state !== 'open') return;
+            if (waiting.length && performance.now() - waiting[0] > REPLY_TIMEOUT) {
+                waiting.length = 0;
+                setLink('wait', 'no answer');
+            }
+            const now = Date.now();
+            if (now - Math.max(lastReply, openedAt) > DEAD_LINK) lost();
+            else if (now - Math.max(lastSend, lastReply) > KEEP_ALIVE) send(P.CMD.SYNC);
+        }, 500);
+
+        /* ---------- connection (Bluetooth serial port of the PC) ---------- */
+
+        // Chrome on Android (148-154 at least) freezes and then crashes when it has to tear down a
+        // Bluetooth serial connection itself: the page reloaded, closed or left while connected,
+        // still connecting or still closing (a bug in Chrome's Bluetooth socket code). A clean close
+        // from the running page is safe. So: one tab uses the port, opening and closing never
+        // overlap, the page closes as soon as it is hidden, the browser asks before the page is
+        // left while connected, and reconnecting happens less and less often while the PC is away.
+        const PORT_OPTIONS = { filters: [{ bluetoothServiceClassId: P.SPP_UUID }], allowedBluetoothServiceClassIds: [P.SPP_UUID] };
+        const RETRY_DELAYS = [2000, 4000, 8000, 15000, 30000];
+        const DEAD_LINK = 15000;
+        let state = 'idle'; // idle, opening, open, closing
+        let port = null;
+        let reader = null;
+        let readDone = null;
+        let openedAt = 0;
+        let retryTimer = 0;
+        let retryCount = 0;
+        let manualOff = false; // closed by hand: no auto connect until Connect or ↻
+        let lastPort = null; // the port that worked (the PC)
+        let portTurn = 0;    // (several remembered ports and none worked yet: take turns)
+        let haveLock = !navigator.locks;
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const within = (promise, ms) => Promise.race([promise, sleep(ms)]); // never wait forever
+
+        async function connectPort(p) {
+            if (state !== 'idle' || !haveLock) return;
+            state = 'opening';
+            clearTimeout(retryTimer);
+            setLink('wait', 'connecting');
+            try {
+                await p.open({ baudRate: 9600 }); // (not cut short: a second open would overlap it)
+            } catch (e) {
+                // still open (an earlier close did not work): close it, the next try opens
+                if (e.name === 'InvalidStateError') {
+                    state = 'closing';
+                    try { await p.close(); } catch (err) {}
+                }
+                state = 'idle';
+                setLink('bad', 'no link');
+                retry();
+                return;
+            }
+            port = p;
+            lastPort = p;
+            writer = p.writable.getWriter();
+            state = 'open';
+            connected = true;
+            openedAt = Date.now();
+            waiting.length = 0;
+            setLink('wait', 'waiting');
+            readDone = readLoop(p);
+            if (document.hidden) { // (hidden while connecting)
+                pause();
+                return;
+            }
+            send(P.CMD.SYNC);
+            keepAwake();
+            render();
+        }
+
+        // one reader for the whole connection: an error or the end of the data = the link is gone
+        async function readLoop(p) {
+            try {
+                reader = p.readable.getReader();
+                for (;;) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    decode(value);
+                }
+            } catch (e) { /* connection gone */ }
+            try { reader.releaseLock(); } catch (e) {}
+            reader = null;
+            if (port === p && state === 'open') lost();
+        }
+
+        // clean close from the running page, right away (safe even while Chrome still waits for
+        // data): stop reading, let go of the writer, close the port. The state stays 'closing'
+        // until Chrome has really closed it: no new open, no forget and the tab keeps the port.
+        async function disconnectPort() {
+            if (state !== 'open') return;
+            state = 'closing';
+            connected = false;
+            waiting.length = 0;
+            render();
+            keepAwake(); // (the screen may turn off again)
+            const p = port;
+            port = null;
+            try { if (reader) reader.cancel().catch(() => {}); } catch (e) {}
+            await within(readDone, 2000);
+            try { if (reader) reader.releaseLock(); } catch (e) {} // (read still not done: let go anyway)
+            try { writer.releaseLock(); } catch (e) {}
+            writer = null;
+            const slow = setTimeout(() => setLink('wait', 'closing'), 3000);
+            try { await p.close(); } catch (e) {}
+            clearTimeout(slow);
+            state = 'idle';
+            render();
+        }
+
+        // the link is gone (read failed or ended, write failed, or no answers for a long time)
+        async function lost() {
+            if (state !== 'open') return;
+            setLink('bad', 'lost');
+            await disconnectPort();
+            retry();
+        }
+
+        // auto connect: soon at first, then less and less often; never while hidden
+        function retry() {
+            clearTimeout(retryTimer);
+            if (document.hidden) return pause();
+            if (!prefs.auto || manualOff || !haveLock || state !== 'idle') return;
+            retryTimer = setTimeout(reconnect, RETRY_DELAYS[Math.min(retryCount++, RETRY_DELAYS.length - 1)]);
+        }
+
+        async function reconnect() {
+            if (state !== 'idle' || !haveLock) return;
+            let ports = [];
+            try { ports = await navigator.serial.getPorts(); } catch (e) {}
+            if (!ports.length) {
+                setLink('', 'offline');
+                return;
+            }
+            connectPort(ports.includes(lastPort) ? lastPort : ports[portTurn++ % ports.length]);
+        }
+
+        // Connect: choose the PC. While connected the button is Close: close the link by hand
+        // (e.g. before reloading the page); auto connect then waits for Connect or ↻.
+        $('connect').addEventListener('click', async () => {
+            if (!haveLock) return notice('other tab');
+            if (state === 'opening' || state === 'closing') return notice('busy');
+            if (state === 'open') {
+                manualOff = true;
+                clearTimeout(retryTimer);
+                await disconnectPort();
+                setLink('', 'offline');
+                return;
+            }
+            const wasOff = manualOff;
+            manualOff = true; // (no auto connect while choosing)
+            clearTimeout(retryTimer);
+            let p;
+            try {
+                p = await navigator.serial.requestPort(PORT_OPTIONS);
+            } catch (e) {
+                manualOff = wasOff;
+                if (e.name !== 'NotFoundError') notice(e.message);
+                retry();
+                return;
+            }
+            manualOff = false;
+            if (state !== 'idle') return notice('busy');
+            // this is the PC now: forget other remembered ports (all closed here), so auto connect
+            // tries only this one
+            for (const other of await navigator.serial.getPorts()) {
+                if (other !== p && other.forget) other.forget().catch(() => {});
+            }
+            retryCount = 0;
+            lastPort = p;
+            connectPort(p);
+        });
+        // ↻: connect again to the known PC (also after Close)
+        $('reconnect').addEventListener('click', async () => {
+            if (!haveLock) return notice('other tab');
+            if (state === 'opening' || state === 'closing') return notice('busy');
+            // the PC answers: nothing to repair, just ask it for the state again
+            if (state === 'open' && Date.now() - lastReply < KEEP_ALIVE + REPLY_TIMEOUT) return send(P.CMD.SYNC);
+            if (state === 'open') await disconnectPort();
+            manualOff = false;
+            retryCount = 0;
+            reconnect();
+        });
+
+        // leaving or reloading the page while connected makes Chrome crash (see above): let the
+        // browser ask first. (No close started here: a close still running then crashes too.)
+        addEventListener('beforeunload', e => {
+            if (state === 'idle') return;
+            e.preventDefault();
+            e.returnValue = '';
+        });
+
+        // hidden (other app, screen off, tab switcher): close cleanly while the page still runs,
+        // before Chrome freezes or discards the tab, and let another tab have the port; connect
+        // again when the page is back. (A task of its own: when the page is being reloaded or
+        // closed it never runs, a close still going on at that moment would crash Chrome.)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearTimeout(retryTimer);
+                setTimeout(() => { if (document.hidden) pause(); }, 0);
+            } else {
+                retryCount = 0;
+                resume();
+            }
+        });
+
+        async function pause() {
+            if (state === 'open') await disconnectPort();
+            if (state !== 'idle') return;
+            if (!document.hidden) return resume(); // (back already)
+            setLink('', 'paused');
+            releaseLock();
+        }
+
+        function resume() {
+            takeLock().then(() => {
+                if (!haveLock || state !== 'idle') return;
+                if (document.hidden) {
+                    setLink('', 'paused');
+                    return releaseLock();
+                }
+                keepAwake();
+                if (prefs.auto && !manualOff) reconnect();
+                else setLink('', 'offline');
+            });
+        }
+
+        // only one tab may use the serial port (two tabs = two connections to the same port):
+        // the visible tab takes it, a hidden tab gives it back
+        let lockWanted = false;
+        let giveBack = null;
+        function takeLock() {
+            if (haveLock || lockWanted) return Promise.resolve();
+            lockWanted = true;
+            return new Promise(resolve => {
+                const hold = () => new Promise(release => { // (held until released)
+                    haveLock = true;
+                    lockWanted = false;
+                    giveBack = release;
+                    resolve();
+                });
+                navigator.locks.request('remote-serial-port', { ifAvailable: true }, lock => {
+                    if (lock) return hold();
+                    setLink('bad', 'other tab');
+                    navigator.locks.request('remote-serial-port', hold);
+                });
+            });
+        }
+        function releaseLock() {
+            if (!navigator.locks || !haveLock) return;
+            haveLock = false;
+            giveBack();
+        }
+
+        /* ---------- screen on ---------- */
+
+        let wakeLock = null;
+        async function keepAwake() {
+            try {
+                if (prefs.awake && connected && !wakeLock && 'wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => { wakeLock = null; });
+                } else if ((!prefs.awake || !connected) && wakeLock) {
+                    await wakeLock.release();
+                }
+            } catch (e) {}
+        }
+
+        /* ---------- start ---------- */
+
+        render();
+        if (!('serial' in navigator)) {
+            setLink('bad', 'no serial');
+            notice('Chrome 138+, https');
+            ['connect', 'reconnect'].forEach(id => { $(id).disabled = true; });
+        } else {
+            resume();
+        }
+    </script>
+</body>
+
+</html>
