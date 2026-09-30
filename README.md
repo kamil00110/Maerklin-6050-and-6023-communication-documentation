@@ -228,4 +228,6 @@ on a 80f while the address is in use
 
 details coming soon
 
-
+## Old sources:
+https://web.archive.org/web/19961110022513/http://www.marklin.com:80/subdir/digital/components/6051.html
+https://web.archive.org/web/19961110022615/http://www.marklin.com/subdir/digital/components/commands.html
